@@ -6,6 +6,9 @@ Namda Donor Drop, claim/verify donation
 ### Demo
 **[Watch the video demo here](https://vimeo.com/1041464145?share=copy)**
 
+## Update on Spreadsheet(Google sheet)
+(https://media.discordapp.net/attachments/1212748968296054814/1320262164304494663/Screenshot_86.png?ex=6768f575&is=6767a3f5&hm=b2cdfd23bf5c48ac24e2efac42a3f3d9424b13a180f1a8888d98d203f4b60f4f&=&format=webp&quality=lossless&width=687&height=322)
+
 ---
 # Installation
 `npm install`
