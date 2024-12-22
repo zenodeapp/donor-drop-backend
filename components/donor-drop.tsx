@@ -1,12 +1,11 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useWeb3 } from '../hooks/useWeb3'
-import { useNamadaKeychain } from '../hooks/useNamadaKeychain'
-
+import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useWeb3 } from '../hooks/useWeb3';
+import { useNamadaKeychain } from '../hooks/useNamadaKeychain';
 
 interface PublicDonation {
   timestamp: string;
@@ -14,29 +13,54 @@ interface PublicDonation {
   amount: string;
   ethAddress: string;
 }
+
+interface Donation {
+  hash: string;
+  message: string;
+  amount: string;
+}
+
+interface RecentDonationsProps {
+  donations: Donation[];
+}
+
+interface DonorDropCheckProps {
+  ethAddress: string | null;
+  namadaAddress: string | null;
+  message: string;
+  setMessage: (value: string) => void;
+  isMetaMaskConnected: boolean;
+  isNamadaConnected: boolean;
+  connectMetaMask: () => void;
+  connectNamada: () => void;
+  ethRecognized: string;
+  metaMaskError: string | null;
+  namadaError: string | null;
+}
+
 export default function DonorDrop() {
   const {
     isConnected: isMetaMaskConnected,
     address: ethAddress,
     error: metaMaskError,
     connectWallet: connectMetaMask,
-  } = useWeb3()
+  } = useWeb3();
 
-  const chainId = 'namada.5f5de2dd1b88cba30586420'
+  const chainId = 'namada.5f5de2dd1b88cba30586420';
   const {
     connect: connectNamada,
     isConnected: isNamadaConnected,
     address: namadaAddress,
     error: namadaError,
-  } = useNamadaKeychain(chainId)
+  } = useNamadaKeychain(chainId);
 
-  const [message, setMessage] = useState('')
-  const [donations, setDonations] = useState([]) // State to hold the donations
-  const [totalDonated, setTotalDonated] = useState('0.00') // Initialize to '0.00'
-  const [totalDonors, setTotalDonors] = useState('0') // Initialize to '0'
-  const [ethRecognized, setEthRecognized] = useState('0.00'); // State to hold the recognized ETH
 
-  // Fetch donations when MetaMask connects
+  const [message, setMessage] = useState('');
+  const [donations, setDonations] = useState<Donation[]>([]);
+  const [totalDonated, setTotalDonated] = useState('0.00');
+  const [totalDonors, setTotalDonors] = useState('0');
+  const [ethRecognized, setEthRecognized] = useState('0.00');
+
   useEffect(() => {
     const fetchDonations = async () => {
       if (isMetaMaskConnected && ethAddress) {
@@ -49,14 +73,14 @@ export default function DonorDrop() {
           if (data.transactionHashes.length > 0) {
             const formattedDonations = data.transactionHashes.map((hash: any, index: number) => ({
               hash,
-              message: `Donation ${index + 1}`, // You can customize messages here
-              amount: data.totalDonation.toString(), // Assuming totalDonation is the same for all, customize as needed
+              message: `Donation ${index + 1}`,
+              amount: data.totalDonation.toString(),
             }));
 
             setDonations(formattedDonations);
-            setTotalDonated(data.totalDonation); // Update total donated if needed
-            setTotalDonors(formattedDonations.length.toString()); // Update total donors
-            setEthRecognized(data.totalDonation.toString()); // Set recognized ETH from the response
+            setTotalDonated(data.totalDonation.toString());
+            setTotalDonors(formattedDonations.length.toString());
+            setEthRecognized(data.totalDonation.toString());
           }
         } catch (error) {
           console.error('Failed to fetch donations:', error);
@@ -65,21 +89,22 @@ export default function DonorDrop() {
     };
 
     fetchDonations();
-  }, [isMetaMaskConnected, ethAddress]); // Run effect when wallet connects
+  }, [isMetaMaskConnected, ethAddress]);
 
   return (
     <div className="container max-w-4xl mx-auto p-6">
       <header className="mb-8">
         <h1 className="text-2xl font-mono mb-2">Namada Donor Drop</h1>
         <p className="text-red-500 font-mono">
-          {totalDonated} / {totalDonors} ETH donated
+          {totalDonated} ETH / {totalDonors} donors
         </p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <AboutSection />
         <MetamaskInstructions />
-        <RecentDonations donations={donations} /> {/* Pass donations to RecentDonations */}
+        
+        <RecentDonations donations={donations} />
         <DonorDropCheck
           ethAddress={ethAddress}
           namadaAddress={namadaAddress}
@@ -89,17 +114,18 @@ export default function DonorDrop() {
           isNamadaConnected={isNamadaConnected}
           connectMetaMask={connectMetaMask}
           connectNamada={connectNamada}
-          ethRecognized={ethRecognized} // Use the updated ethRecognized state
+          ethRecognized={ethRecognized}
           metaMaskError={metaMaskError}
           namadaError={namadaError}
         />
+  
       </div>
 
       <p className="text-sm text-muted-foreground mt-4 text-center">
         NAMADA DONOR DROP
       </p>
     </div>
-  )
+  );
 }
 
 function AboutSection() {
@@ -107,7 +133,7 @@ function AboutSection() {
     <Card className="p-6 bg-[#fefcd3]">
       <h2 className="font-mono mb-4">About Coin Center</h2>
     </Card>
-  )
+  );
 }
 
 function MetamaskInstructions() {
@@ -127,36 +153,26 @@ function MetamaskInstructions() {
         </li>
       </ol>
       <p className="text-red-500 mt-4 text-sm font-mono">
-        Minimum 0.05 maximum 0.30 ETH only
+        Minimum 0.05, maximum 0.30 ETH only
       </p>
     </Card>
-  )
-}
-// Define the type for individual donation
-interface Donation {
-  hash: string;
-  message: string;
-  amount: string;
-}
-
-interface RecentDonationsProps {
-  donations: Donation[];
+  );
 }
 
 function RecentDonations({ donations }: RecentDonationsProps) {
-  // Check if there are donations
   if (donations.length === 0) {
     return (
       <Card className="p-6">
         <h2 className="font-mono mb-4">Recent Donations</h2>
         <p>No recent donations available.</p>
       </Card>
+      
     );
+    
   }
 
-  // Get the last donation
   const lastDonation = donations[donations.length - 1];
-  const shortHash = `${lastDonation.hash.slice(0, 6)}..${lastDonation.hash.slice(-2)}`; // Shorten the hash
+  const shortHash = `${lastDonation.hash.slice(0, 6)}..${lastDonation.hash.slice(-2)}`;
 
   return (
     <Card className="p-6">
@@ -175,17 +191,12 @@ function RecentDonations({ donations }: RecentDonationsProps) {
         </div>
         <span>{lastDonation.amount} ETH</span>
       </div>
+      <PublicRecentDonation />
     </Card>
+    
   );
 }
 
-
-interface PublicDonation {
-  timestamp: string;
-  message: string;
-  amount: string;
-  ethAddress: string;
-}
 function PublicRecentDonation() {
   const [publicDonation, setPublicDonation] = useState<PublicDonation | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -194,27 +205,25 @@ function PublicRecentDonation() {
   useEffect(() => {
     const fetchPublicDonation = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/recentdonation');
+        const response = await fetch('/api/recentdonation');
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-
-        // Validate and set the donation data
-        if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-          const [timestamp, message, amount, ethAddress] = data.data[0];
+        if (data.data && data.data.length > 0) {
+          const donationData = data.data[0];
           setPublicDonation({
-            timestamp,
-            message,
-            amount,
-            ethAddress,
+            timestamp: donationData[0],
+            message: donationData[1],
+            amount: donationData[2],
+            ethAddress: donationData[4],
           });
         } else {
           setPublicDonation(null);
         }
       } catch (error) {
         console.error('Failed to fetch public donation:', error);
-        setError('Failed to load public donation.'); // Set error message
+        setError('Failed to load public donation.');
       } finally {
         setLoading(false);
       }
@@ -223,24 +232,13 @@ function PublicRecentDonation() {
     fetchPublicDonation();
   }, []);
 
-  if (loading) {
-    return <p>Loading public donation...</p>;
-  }
-
-  if (error) {
-    return <p className="text-red-500">{error}</p>;
-  }
-
-  if (!publicDonation) {
-    return <p>No public donation available.</p>;
-  }
+  if (loading) return <p>Loading public donation...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
+  if (!publicDonation) return <p>No public donation available.</p>;
 
   const { timestamp, message, amount, ethAddress } = publicDonation;
-  const shortEthAddress = `${ethAddress.slice(0, 6)}...${ethAddress.slice(-4)}`;
-  const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
-    month: 'long',
-    day: 'numeric',
-  });
+  const shortEthAddress = `${ethAddress.slice(0, 6)}..${ethAddress.slice(-4)}`;
+  const formattedDate = new Date(timestamp).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
 
   return (
     <div className="mt-4 border-t pt-4">
@@ -252,28 +250,14 @@ function PublicRecentDonation() {
           rel="noopener noreferrer"
           className="text-blue-600 hover:underline"
         >
-          {`ETH Address: ${shortEthAddress}`}
+          {shortEthAddress}
         </a>
-        <span>{`Message: ${message}`}</span>
-        <span>{`Amount: ${Number(amount).toFixed(2)} ETH`}</span>
-        <span>{`Date: ${formattedDate}`}</span>
+        <span>{message}</span>
+        <span>{amount} ETH</span>
+        <span>{formattedDate}</span>
       </div>
     </div>
   );
-}
-
-interface DonorDropCheckProps {
-  ethAddress: string | null
-  namadaAddress: string | null
-  message: string
-  setMessage: (value: string) => void
-  isMetaMaskConnected: boolean
-  isNamadaConnected: boolean
-  connectMetaMask: () => void
-  connectNamada: () => void
-  ethRecognized: string
-  metaMaskError: string | null
-  namadaError: string | null
 }
 
 function DonorDropCheck({
@@ -289,37 +273,46 @@ function DonorDropCheck({
   metaMaskError,
   namadaError,
 }: DonorDropCheckProps) {
-  const recognizedAmount = parseFloat(ethRecognized); // Parse the recognized ETH as a number
-  const minRequiredEth = 0.002; // Minimum required ETH for submission
+  const recognizedAmount = parseFloat(ethRecognized);
+  const minRequiredEth = 0.002;
+  const { signMessage } = useWeb3(); // Add this line to get the signMessage function
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const data = {
-      message,
-      recognizedAmount: ethRecognized,
-      namadaAddress,
-      ethAddress,
-    };
+    // Prepare the message to sign
+    const messageToSign = `I am donating ${ethRecognized} ETH. Message: ${message}`;
 
     try {
-      const response = await fetch('/api/saveToSheet', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const signature = await signMessage(messageToSign); // Sign the message
 
-      if (response.ok) {
-        alert('Message submitted successfully!');
-        setMessage('');
-      } else {
-        alert('Failed to submit the message. Please try again later.');
+      if (signature) {
+        // If signing is successful, send the data to the API
+        const data = {
+          message,
+          recognizedAmount: ethRecognized,
+          namadaAddress,
+          ethAddress,
+          signature, // Include the signature
+        };
+
+        const response = await fetch('/api/saveToSheet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          alert('Message submitted successfully!');
+          setMessage('');
+        } else {
+          alert('Failed to submit the message. Please try again later.');
+        }
       }
     } catch (error) {
-      console.error('Error submitting the message:', error);
-      alert('An error occurred while submitting the message.');
+      console.error('Error signing the message:', error);
+      alert('Failed to sign the message. Please ensure your wallet is connected and try again.');
     }
   };
 
@@ -400,4 +393,3 @@ function DonorDropCheck({
     </Card>
   );
 }
-
