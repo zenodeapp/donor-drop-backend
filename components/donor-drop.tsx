@@ -94,7 +94,7 @@ export default function DonorDrop() {
     // Fetch data from the API
     const calculateTotalDonated = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/calculate');
+        const response = await fetch('/api/calculate');
         const data = await response.json();
         
         // Assuming your API response contains totalSum
