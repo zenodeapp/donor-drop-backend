@@ -35,8 +35,32 @@ export function useWeb3() {
     }
   }
 
-  useEffect(() => {
+  const signMessage = async (message: string) => {
+    if (!state.isConnected) {
+      setState(prev => ({
+        ...prev,
+        error: 'Wallet not connected'
+      }))
+      return;
+    }
 
+    try {
+      const signature = await window.ethereum.request({
+        method: 'personal_sign',
+        params: [message, state.address],
+      });
+
+      return signature; // The signed message
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: 'Message signing failed'
+      }));
+      console.error(error);
+    }
+  }
+
+  useEffect(() => {
     if (typeof window.ethereum !== 'undefined') {
       window.ethereum.request({ method: 'eth_accounts' })
         .then((accounts: string | any[]) => {
@@ -53,7 +77,7 @@ export function useWeb3() {
 
   return {
     ...state,
-    connectWallet
+    connectWallet,
+    signMessage
   }
 }
-
