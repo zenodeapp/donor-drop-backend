@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 
-
+const SPREADSHEET_ID = '1W1uP-hqV4--JGXChFSyhF0TUF5OwK1zIyiXjd_ESEH4';
+const RANGE = 'Sheet1!A:H';
 
 const sheets = google.sheets('v4');
 
