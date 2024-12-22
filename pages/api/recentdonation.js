@@ -1,15 +1,19 @@
 import { google } from 'googleapis';
+import dotenv from 'dotenv';
 
-// Set your Google Sheets ID and range
-const SPREADSHEET_ID = '1W1uP-hqV4--JGXChFSyhF0TUF5OwK1zIyiXjd_ESEH4';
-const RANGE = 'Sheet1!A:H'; // Adjust the range as needed
+// Load environment variables
+dotenv.config();
+
+// Set your Google Sheets ID and range from environment variables
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
+const RANGE = process.env.SHEET_RANGE || 'Sheet1!A:H'; // Default range if not specified
 
 const sheets = google.sheets('v4');
 
 // Configure the Google Sheets API client
 async function authenticate() {
   const auth = new google.auth.GoogleAuth({
-    keyFile: 'collegeproject-c9550-c919afa91c6b.json', // Path to your service account key file
+    keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY, // Path to your service account key file from .env
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'], // Read-only scope
   });
   return await auth.getClient();
