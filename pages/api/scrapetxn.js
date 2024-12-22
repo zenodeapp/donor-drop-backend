@@ -2,12 +2,11 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
 
-// Setup
+
 const API_KEY = 'U42S46F9HAIY1NV5U2P186USKB6N89KEQP'; 
 const ADDRESS = '0x15322B546e31F5Bfe144C4ae133A9Db6F0059fe3'; 
 const BASE_URL = 'https://api.etherscan.io/api';
 
-// Example contract ABI (replace this with the actual contract ABI if known)
 const CONTRACT_ABI = [
   {
     constant: false,
@@ -25,7 +24,7 @@ const iface = new ethers.Interface(CONTRACT_ABI);
 
 // Date filter helper
 const isWithinDateRange = (timestamp, startDate, endDate) => {
-  const date = new Date(timestamp * 1000); // Convert UNIX timestamp to milliseconds
+  const date = new Date(timestamp * 1000); 
   return date >= startDate && date <= endDate;
 };
 
@@ -118,10 +117,8 @@ export default async function handler(req, res) {
       tx.decodedRawInput && tx.decodedRawInput.includes("NAMADA")
     );
 
-    // Respond with the filtered transactions
     res.status(200).json(filteredTransactions);
   } else {
-    // Respond with a 405 Method Not Allowed error
     res.setHeader('Allow', ['GET']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
