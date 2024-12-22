@@ -199,17 +199,18 @@ function PublicRecentDonation() {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        // Check if data has at least one donation
-        if (data.data && data.data.length > 0) {
-          const donationData = data.data[0];
+
+        // Validate and set the donation data
+        if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+          const [timestamp, message, amount, ethAddress] = data.data[0];
           setPublicDonation({
-            timestamp: donationData[0],
-            message: donationData[1],
-            amount: donationData[2],
-            ethAddress: donationData[4],
-          }); // Assuming the structure of donationData is correct
+            timestamp,
+            message,
+            amount,
+            ethAddress,
+          });
         } else {
-          setPublicDonation(null); // No donations available
+          setPublicDonation(null);
         }
       } catch (error) {
         console.error('Failed to fetch public donation:', error);
@@ -230,18 +231,12 @@ function PublicRecentDonation() {
     return <p className="text-red-500">{error}</p>;
   }
 
-  // Check if publicDonation is valid
   if (!publicDonation) {
     return <p>No public donation available.</p>;
   }
 
-  // Destructure the donation object
   const { timestamp, message, amount, ethAddress } = publicDonation;
-
-  // Shorten the ETH address
-  const shortEthAddress = `${ethAddress.slice(0, 2)}...${ethAddress.slice(-2)}`;
-
-  // Format the timestamp to show only the date and month
+  const shortEthAddress = `${ethAddress.slice(0, 6)}...${ethAddress.slice(-4)}`;
   const formattedDate = new Date(timestamp).toLocaleDateString(undefined, {
     month: 'long',
     day: 'numeric',
@@ -259,9 +254,9 @@ function PublicRecentDonation() {
         >
           {`ETH Address: ${shortEthAddress}`}
         </a>
-        <span>{`Message ${message}`}</span>
-        <span>{`Amount ${amount} ETH`}</span>
-        <span>{`Date ${formattedDate}`}</span>
+        <span>{`Message: ${message}`}</span>
+        <span>{`Amount: ${Number(amount).toFixed(2)} ETH`}</span>
+        <span>{`Date: ${formattedDate}`}</span>
       </div>
     </div>
   );
@@ -405,5 +400,4 @@ function DonorDropCheck({
     </Card>
   );
 }
-
 
