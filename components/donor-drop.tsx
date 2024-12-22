@@ -294,7 +294,7 @@ function DonorDropCheck({
   namadaError,
 }: DonorDropCheckProps) {
   const recognizedAmount = parseFloat(ethRecognized);
-  const minRequiredEth = 0.000;
+  const minRequiredEth = 0.002;
   const { signMessage } = useWeb3(); // Add this line to get the signMessage function
 
 
