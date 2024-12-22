@@ -90,13 +90,33 @@ export default function DonorDrop() {
 
     fetchDonations();
   }, [isMetaMaskConnected, ethAddress]);
+  useEffect(() => {
+    // Fetch data from the API
+    const calculateTotalDonated = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/calculate');
+        const data = await response.json();
+        
+        // Assuming your API response contains totalSum
+        if (data.success) {
+          setTotalDonated(data.totalSum);
+          // If you have donors data, set it as well, for example:
+          // setTotalDonors(data.totalDonors);
+        }
+      } catch (error) {
+        console.error('Error fetching donation data:', error);
+      }
+    };
+
+    calculateTotalDonated();
+  }, []); 
 
   return (
     <div className="container max-w-4xl mx-auto p-6">
       <header className="mb-8">
         <h1 className="text-2xl font-mono mb-2">Namada Donor Drop</h1>
         <p className="text-red-500 font-mono">
-          {totalDonated} ETH / {totalDonors} donors
+        {totalDonated} ETH / 27 ETH
         </p>
       </header>
 
@@ -282,7 +302,7 @@ function DonorDropCheck({
     e.preventDefault();
 
     // Prepare the message to sign
-    const messageToSign = `I am donating ${ethRecognized} ETH. Message: ${message}`;
+    const messageToSign = `I have made donation and submitting claim`;
 
     try {
       const signature = await signMessage(messageToSign); // Sign the message
