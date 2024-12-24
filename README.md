@@ -30,7 +30,7 @@ run> npm run dev
    - Place the JSON key file in the project directory.  
 
 4. **Update Configuration**  
-   - pdate the .env with the details from the json.  
+   - Update the .env with the details from the json.  
 
 5. **Run the Application**  
    - Start the app and track donations seamlessly.  
