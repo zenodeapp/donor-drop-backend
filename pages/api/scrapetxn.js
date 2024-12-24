@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
@@ -32,16 +31,33 @@ const isWithinDateRange = (timestamp, startDate, endDate) => {
   return date >= startDate && date <= endDate;
 };
 
-// Fetch transactions for the address
-const getTransactions = async (address) => {
+// New function to get the latest block number
+const getLatestBlock = async () => {
+  try {
+    const response = await axios.get(BASE_URL, {
+      params: {
+        module: 'proxy',
+        action: 'eth_blockNumber',
+        apikey: API_KEY,
+      },
+    });
+    return parseInt(response.data.result, 16);
+  } catch (error) {
+    console.error(`Error fetching latest block: ${error.message}`);
+    return null;
+  }
+};
+
+// Modified to accept block range
+const getTransactions = async (address, startBlock, endBlock) => {
   try {
     const response = await axios.get(BASE_URL, {
       params: {
         module: 'account',
         action: 'txlist',
         address: address,
-        startblock: 0,
-        endblock: 99999999,
+        startblock: startBlock,
+        endblock: endBlock,
         sort: 'asc',
         apikey: API_KEY,
       },
@@ -103,29 +119,53 @@ const decodeInputData = (transactions, startDate, endDate) => {
     .filter((tx) => tx !== null); // Filter out null entries
 };
 
-// API route handler
+// Split into two API endpoints
 export default async function handler(req, res) {
-  // Only allow GET requests
-  if (req.method === 'GET') {
-    console.log('Fetching transactions...');
-    const transactions = await getTransactions(ADDRESS);
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
+  }
 
-    // TODO: Use startBlock and endBlock to filter transactions, I think it is safer. Can get this from config
+  const { mode } = req.query;
+
+  if (mode === 'initial') {
+    // Initial scraping of all historical transactions
+    console.log('Fetching all historical transactions...');
+    const transactions = await getTransactions(ADDRESS, 0, 99999999);
     const startDate = new Date(START_DATE_STRING);
     const endDate = new Date(END_DATE_STRING);
 
     console.log(`Filtering and decoding transactions from ${startDate} to ${endDate}...`);
     const decodedTransactions = decodeInputData(transactions, startDate, endDate);
-
-    // Filter for transactions that contain the keyword "NAMADA"
     const filteredTransactions = decodedTransactions.filter(tx =>
-      // For full robustness, I believe this is possible using the namada sdk ...
-      tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || tx.decodedRawInput.includes("tpknam") || tx.decodedRawInput.includes("tnam"))
+      tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
+      tx.decodedRawInput.includes("tpknam") || 
+      tx.decodedRawInput.includes("tnam"))
     );
 
-    res.status(200).json(filteredTransactions);
+    return res.status(200).json(filteredTransactions);
+
+  } else if (mode === 'recent') {
+    // Scraping only recent blocks
+    const latestBlock = await getLatestBlock();
+    if (!latestBlock) {
+      return res.status(500).json({ message: 'Failed to fetch latest block' });
+    }
+
+    // Look back ~13 seconds worth of blocks (assume ~1 block per 13 seconds)
+    const startBlock = latestBlock - 1;
+    console.log(`Fetching recent transactions from blocks ${startBlock} to ${latestBlock}...`);
+    
+    const transactions = await getTransactions(ADDRESS, startBlock, latestBlock);
+    const decodedTransactions = decodeInputData(transactions, new Date(0), new Date());
+    const filteredTransactions = decodedTransactions.filter(tx =>
+      tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
+      tx.decodedRawInput.includes("tpknam") || 
+      tx.decodedRawInput.includes("tnam"))
+    );
+
+    return res.status(200).json(filteredTransactions);
+
   } else {
-    res.setHeader('Allow', ['GET']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(400).json({ message: 'Invalid mode specified. Use "initial" or "recent".' });
   }
 }
