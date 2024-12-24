@@ -1,11 +1,15 @@
 
 import axios from 'axios';
 import { ethers } from 'ethers';
+import dotenv from 'dotenv';
 
+dotenv.config();
 
-const API_KEY = 'U42S46F9HAIY1NV5U2P186USKB6N89KEQP'; 
-const ADDRESS = '0x15322B546e31F5Bfe144C4ae133A9Db6F0059fe3'; 
-const BASE_URL = 'https://api.etherscan.io/api';
+const API_KEY = process.env.ETHERSCAN_API_KEY; 
+const ADDRESS = process.env.COINCENTER_ADDRESS; 
+const BASE_URL = process.env.ETHERSCAN_BASE_URL;
+const START_DATE_STRING = process.env.SCRAPING_START_DATE;
+const END_DATE_STRING = process.env.SCRAPING_END_DATE;
 
 const CONTRACT_ABI = [
   {
@@ -106,15 +110,17 @@ export default async function handler(req, res) {
     console.log('Fetching transactions...');
     const transactions = await getTransactions(ADDRESS);
 
-    const startDate = new Date('2024-12-21T00:00:00Z');
-    const endDate = new Date('2024-12-29T23:59:59Z');
+    // TODO: Use startBlock and endBlock to filter transactions, I think it is safer. Can get this from config
+    const startDate = new Date(START_DATE_STRING);
+    const endDate = new Date(END_DATE_STRING);
 
     console.log(`Filtering and decoding transactions from ${startDate} to ${endDate}...`);
     const decodedTransactions = decodeInputData(transactions, startDate, endDate);
 
     // Filter for transactions that contain the keyword "NAMADA"
-    const filteredTransactions = decodedTransactions.filter(tx => 
-      tx.decodedRawInput && tx.decodedRawInput.includes("NAMADA")
+    const filteredTransactions = decodedTransactions.filter(tx =>
+      // For full robustness, I believe this is possible using the namada sdk ...
+      tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || tx.decodedRawInput.includes("tpknam") || tx.decodedRawInput.includes("tnam"))
     );
 
     res.status(200).json(filteredTransactions);

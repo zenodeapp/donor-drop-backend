@@ -1,14 +1,17 @@
 import axios from 'axios';
+import dotenv from 'dotenv';
+import { formatEther } from 'ethers';
 
-const ETHERSCAN_API_KEY = 'U42S46F9HAIY1NV5U2P186USKB6N89KEQP';
-
-
-const toAddress = '0x15322B546e31F5Bfe144C4ae133A9Db6F0059fe3';
-const startDate = new Date('2024-12-22');
-const endDate = new Date('2024-12-29');
+dotenv.config();
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const toAddress = process.env.COINCENTER_ADDRESS;
+// TODO: Instead of startDate and endDate, I think it's better to use startBlock and endBlock
+const startDate = new Date(process.env.SCANNING_START_DATE);
+const endDate = new Date(process.env.SCANNING_END_DATE);
 endDate.setHours(23, 59, 59, 999); // Set end date to the end of the day
 
 async function getTransactions(address) {
+    // TODO: It could be worth to figure out start block and end block from the start and end date, in order to save compute and requests
     const url = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc&apikey=${ETHERSCAN_API_KEY}`;
     
     try {
@@ -39,7 +42,7 @@ function filterTransactions(transactions, fromAddress) {
 
 // Function to convert Wei to Ether
 function weiToEth(wei) {
-    return wei / 1e18; // 1 Ether = 10^18 Wei
+    return formatEther(wei); // Handles conversion safely with proper decimal precision
 }
 
 // Next.js API route handler
@@ -71,7 +74,7 @@ export default async function handler(req, res) {
         });
 
         // Send response with last donation timestamp
-        res.status(200).json({
+        return res.status(200).json({
             transactionHashes,
             totalDonation,
             lastDonationTimestamp: new Date(lastTimestamp * 1000).toISOString(), // Format the last timestamp
@@ -79,6 +82,6 @@ export default async function handler(req, res) {
             toAddress
         });
     } else {
-        res.status(404).json({ message: 'No transactions found from the specified address to the hardcoded address within the date range.' });
+        return res.status(404).json({ message: 'No transactions found from the specified address to the hardcoded address within the date range.' });
     }
 }
