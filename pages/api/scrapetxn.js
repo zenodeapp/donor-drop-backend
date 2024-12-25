@@ -216,6 +216,6 @@ export default async function handler(req, res) {
 }
 
 function extractNamadaKey(message) {
-  const match = message.match(/tpknam[a-zA-Z0-9]+/);
+  const match = message.match(/t(pk)?nam[a-zA-Z0-9]+/);
   return match ? match[0] : '';
 }
