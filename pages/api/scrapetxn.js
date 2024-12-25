@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
+import { Pool } from 'pg';
 
 dotenv.config();
 
@@ -119,6 +120,37 @@ const decodeInputData = (transactions, startDate, endDate) => {
     .filter((tx) => tx !== null); // Filter out null entries
 };
 
+// Create the pool connection (you can move this to a separate db.js file)
+const pool = new Pool({
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
+  host: 'localhost',
+  port: 5434,
+  database: process.env.POSTGRES_DB
+});
+
+// Add a function to save transaction
+async function saveTransaction(tx) {
+  const query = `
+    INSERT INTO donations 
+    (transaction_hash, from_address, amount_eth, namada_key, input_message, timestamp)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (transaction_hash) DO NOTHING
+    RETURNING *
+  `;
+
+  const values = [
+    tx.hash,
+    tx.from,
+    tx.value,
+    extractNamadaKey(tx.decodedRawInput),
+    tx.decodedRawInput,
+    new Date(tx.timestamp)
+  ];
+
+  return pool.query(query, values);
+}
+
 // Split into two API endpoints
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -127,45 +159,63 @@ export default async function handler(req, res) {
 
   const { mode } = req.query;
 
-  if (mode === 'initial') {
-    // Initial scraping of all historical transactions
-    console.log('Fetching all historical transactions...');
-    const transactions = await getTransactions(ADDRESS, 0, 99999999);
-    const startDate = new Date(START_DATE_STRING);
-    const endDate = new Date(END_DATE_STRING);
+  try {
+    if (mode === 'initial') {
+      console.log('Fetching all historical transactions...');
+      const transactions = await getTransactions(ADDRESS, 0, 99999999);
+      const startDate = new Date(START_DATE_STRING);
+      const endDate = new Date(END_DATE_STRING);
 
-    console.log(`Filtering and decoding transactions from ${startDate} to ${endDate}...`);
-    const decodedTransactions = decodeInputData(transactions, startDate, endDate);
-    const filteredTransactions = decodedTransactions.filter(tx =>
-      tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
-      tx.decodedRawInput.includes("tpknam") || 
-      tx.decodedRawInput.includes("tnam"))
-    );
+      console.log(`Filtering and decoding transactions from ${startDate} to ${endDate}...`);
+      const decodedTransactions = decodeInputData(transactions, startDate, endDate);
+      const filteredTransactions = decodedTransactions.filter(tx =>
+        tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
+        tx.decodedRawInput.includes("tpknam") || 
+        tx.decodedRawInput.includes("tnam"))
+      );
 
-    return res.status(200).json(filteredTransactions);
+      // Save filtered transactions to database
+      const savePromises = filteredTransactions.map(tx => saveTransaction(tx));
+      await Promise.all(savePromises);
 
-  } else if (mode === 'recent') {
-    // Scraping only recent blocks
-    const latestBlock = await getLatestBlock();
-    if (!latestBlock) {
-      return res.status(500).json({ message: 'Failed to fetch latest block' });
+      return res.status(200).json(filteredTransactions);
+
+    } else if (mode === 'recent') {
+      const latestBlock = await getLatestBlock();
+      if (!latestBlock) {
+        return res.status(500).json({ message: 'Failed to fetch latest block' });
+      }
+
+      const startBlock = latestBlock - 1;
+      console.log(`Fetching recent transactions from blocks ${startBlock} to ${latestBlock}...`);
+      
+      const transactions = await getTransactions(ADDRESS, startBlock, latestBlock);
+      const decodedTransactions = decodeInputData(transactions, new Date(0), new Date());
+      const filteredTransactions = decodedTransactions.filter(tx =>
+        tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
+        tx.decodedRawInput.includes("tpknam") || 
+        tx.decodedRawInput.includes("tnam"))
+      );
+
+      // Save filtered transactions to database
+      const savePromises = filteredTransactions.map(tx => saveTransaction(tx));
+      await Promise.all(savePromises);
+
+      return res.status(200).json(filteredTransactions);
+
+    } else {
+      return res.status(400).json({ message: 'Invalid mode specified. Use "initial" or "recent".' });
     }
-
-    // Look back ~13 seconds worth of blocks (assume ~1 block per 13 seconds)
-    const startBlock = latestBlock - 1;
-    console.log(`Fetching recent transactions from blocks ${startBlock} to ${latestBlock}...`);
-    
-    const transactions = await getTransactions(ADDRESS, startBlock, latestBlock);
-    const decodedTransactions = decodeInputData(transactions, new Date(0), new Date());
-    const filteredTransactions = decodedTransactions.filter(tx =>
-      tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
-      tx.decodedRawInput.includes("tpknam") || 
-      tx.decodedRawInput.includes("tnam"))
-    );
-
-    return res.status(200).json(filteredTransactions);
-
-  } else {
-    return res.status(400).json({ message: 'Invalid mode specified. Use "initial" or "recent".' });
+  } catch (error) {
+    console.error('Error processing transactions:', error);
+    return res.status(500).json({ 
+      error: 'Error processing transactions', 
+      details: error.message 
+    });
   }
+}
+
+function extractNamadaKey(message) {
+  const match = message.match(/tpknam[a-zA-Z0-9]+/);
+  return match ? match[0] : '';
 }
