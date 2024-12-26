@@ -8,8 +8,8 @@ dotenv.config();
 const API_KEY = process.env.ETHERSCAN_API_KEY; 
 const ADDRESS = process.env.COINCENTER_ADDRESS; 
 const BASE_URL = process.env.ETHERSCAN_BASE_URL;
-const START_DATE_STRING = process.env.SCRAPING_START_DATE;
-const END_DATE_STRING = process.env.SCRAPING_END_DATE;
+const START_DATE_STRING = process.env.SCANNING_START_DATE;
+const END_DATE_STRING = process.env.SCANNING_END_DATE;
 
 const CONTRACT_ABI = [
   {
@@ -171,7 +171,7 @@ export default async function handler(req, res) {
       const filteredTransactions = decodedTransactions.filter(tx =>
         tx.decodedRawInput && (tx.decodedRawInput.includes("NAMADA") || 
         tx.decodedRawInput.includes("tpknam") || 
-        tx.decodedRawInput.includes("tnam"))
+        tx.decodedRawInput.includes("tnam")) || true
       );
 
       // Save filtered transactions to database
@@ -186,7 +186,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ message: 'Failed to fetch latest block' });
       }
 
-      const startBlock = latestBlock - 1;
+      const startBlock = latestBlock - 2;
       console.log(`Fetching recent transactions from blocks ${startBlock} to ${latestBlock}...`);
       
       const transactions = await getTransactions(ADDRESS, startBlock, latestBlock);
