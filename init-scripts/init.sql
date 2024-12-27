@@ -9,6 +9,16 @@ CREATE TABLE IF NOT EXISTS donations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS scraped_blocks (
+    id SERIAL PRIMARY KEY,
+    block_number BIGINT UNIQUE NOT NULL,
+    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    transactions_found INTEGER DEFAULT 0
+);
+
+-- Create an index for faster block number lookups
+CREATE INDEX idx_block_number ON scraped_blocks(block_number);
+
 -- You can add more tables or initial data here
 -- For example:
 -- INSERT INTO donations (transaction_hash, from_address, amount_eth, timestamp)

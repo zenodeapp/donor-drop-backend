@@ -60,45 +60,13 @@ export default function DonorDrop() {
   const [totalDonors, setTotalDonors] = useState('0');
 
   useEffect(() => {
-    const fetchDonations = async () => {
-      if (isMetaMaskConnected && ethAddress) {
-        try {
-          const response = await fetch(`/api/scrapetxn?mode=initial`);
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          const data = await response.json();
-          if (data.transactionHashes.length > 0) {
-            const formattedDonations = data.transactionHashes.map((hash: any, index: number) => ({
-              hash,
-              message: `Donation ${index + 1}`,
-              amount: data.totalDonation.toString(),
-            }));
-
-            setDonations(formattedDonations);
-            setTotalDonated(data.totalDonation.toString());
-            setTotalDonors(formattedDonations.length.toString());
-          }
-        } catch (error) {
-          console.error('Failed to fetch donations:', error);
-        }
-      }
-    };
-
-    fetchDonations();
-  }, [isMetaMaskConnected, ethAddress]);
-  useEffect(() => {
-    // Fetch data from the API
     const calculateTotalDonated = async () => {
       try {
         const response = await fetch('/api/calculate');
         const data = await response.json();
         
-        // Assuming your API response contains totalSum
-        if (data.success) {
+        if (data.totalSum) {
           setTotalDonated(data.totalSum);
-          // If you have donors data, set it as well, for example:
-          // setTotalDonors(data.totalDonors);
         }
       } catch (error) {
         console.error('Error fetching donation data:', error);
@@ -176,18 +144,55 @@ function MetamaskInstructions() {
 }
 
 function RecentDonations({ donations }: Readonly<RecentDonationsProps>) {
-  if (donations.length === 0) {
+  const [recentDonations, setRecentDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentDonations = async () => {
+      try {
+        const response = await fetch('/api/scrapetxn');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        
+        // Format the donations from the database
+        const formattedDonations = data.map((donation: any) => ({
+          hash: donation.transaction_hash,
+          message: donation.input_message || 'No message',
+          amount: donation.amount_eth
+        }));
+
+        setRecentDonations(formattedDonations);
+      } catch (error) {
+        console.error('Failed to fetch donations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentDonations();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <h2 className="font-mono mb-4">Recent Donations</h2>
+        <p>Loading donations...</p>
+      </Card>
+    );
+  }
+
+  if (recentDonations.length === 0) {
     return (
       <Card className="p-6">
         <h2 className="font-mono mb-4">Recent Donations</h2>
         <p>No recent donations available.</p>
       </Card>
-      
     );
-    
   }
 
-  const lastDonation = donations[donations.length - 1];
+  const lastDonation = recentDonations[0]; // Get most recent donation
   const shortHash = `${lastDonation.hash.slice(0, 6)}..${lastDonation.hash.slice(-2)}`;
 
   return (
@@ -209,7 +214,6 @@ function RecentDonations({ donations }: Readonly<RecentDonationsProps>) {
       </div>
       <PublicRecentDonation />
     </Card>
-    
   );
 }
 
