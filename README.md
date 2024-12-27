@@ -1,43 +1,36 @@
 # NAMADA DONOR DROP
 
 ## Overview
+
 Namda Donor Drop, claim/verify donation
 
 ### Demo
+
 **[Watch the video demo here](https://vimeo.com/1041464145?share=copy)**
 
-## Update on Spreadsheet(Google sheet) looks like this
-https://docs.google.com/spreadsheets/d/1W1uP-hqV4--JGXChFSyhF0TUF5OwK1zIyiXjd_ESEH4/edit?gid=0#gid=0
+## Installation
 
----
-# Installation
 `npm install`
-
-run> npm run dev
-
 
 ## Setup Instructions
 
-1. **Create a Google Spreadsheet**  
-   - Go to Google Sheets and create a new spreadsheet.  
-   - Share it with the service account email from the JSON key file. Set the permissions to **Editor**.
+### 0 Edit the `.env` file, populating all the fields as required
 
-2. **Set Up Google Cloud API**  
-   - Enable the **Google Sheets API** and **Google Drive API** in the Google Cloud Console.  
-   - Create a service account and download the JSON key file.  
+### 1 Setup the postgres database using `docker-compose`
 
-3. **Get the JSON Key File**  
-   - Place the JSON key file in the project directory.  
+```bash
+docker-compose up -d
+```
 
-4. **Update Configuration**  
-   - pdate the .env with the details from the json.  
+This will setup the correct postgres database running on port 5434. The table created is specified in the `init-scripts/init.sql` file.
+In order to view this, use a tool like `pgAdmin` or `dbeaver` to connect to the database using the credentials specified in the `.env` file.
 
-5. **Run the Application**  
-   - Start the app and track donations seamlessly.  
+### 3 **Get the JSON Key File**
 
----
+Place the JSON key file in the project directory.  
 
+### 4 **Run the Application**
 
-
-
-
+```bash
+npm run dev
+```

@@ -33,7 +33,6 @@ interface DonorDropCheckProps {
   isNamadaConnected: boolean;
   connectMetaMask: () => void;
   connectNamada: () => void;
-  ethRecognized: string;
   metaMaskError: string | null;
   namadaError: string | null;
 }
@@ -59,49 +58,15 @@ export default function DonorDrop() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [totalDonated, setTotalDonated] = useState('0.00');
   const [totalDonors, setTotalDonors] = useState('0');
-  const [ethRecognized, setEthRecognized] = useState('0.00');
 
   useEffect(() => {
-    const fetchDonations = async () => {
-      if (isMetaMaskConnected && ethAddress) {
-        try {
-          const response = await fetch(`/api/verifytxn?fromAddress=${ethAddress}`);
-          if (!response.ok) {
-            throw new Error('Network response was not ok');
-          }
-          const data = await response.json();
-          if (data.transactionHashes.length > 0) {
-            const formattedDonations = data.transactionHashes.map((hash: any, index: number) => ({
-              hash,
-              message: `Donation ${index + 1}`,
-              amount: data.totalDonation.toString(),
-            }));
-
-            setDonations(formattedDonations);
-            setTotalDonated(data.totalDonation.toString());
-            setTotalDonors(formattedDonations.length.toString());
-            setEthRecognized(data.totalDonation.toString());
-          }
-        } catch (error) {
-          console.error('Failed to fetch donations:', error);
-        }
-      }
-    };
-
-    fetchDonations();
-  }, [isMetaMaskConnected, ethAddress]);
-  useEffect(() => {
-    // Fetch data from the API
     const calculateTotalDonated = async () => {
       try {
         const response = await fetch('/api/calculate');
         const data = await response.json();
         
-        // Assuming your API response contains totalSum
-        if (data.success) {
+        if (data.totalSum) {
           setTotalDonated(data.totalSum);
-          // If you have donors data, set it as well, for example:
-          // setTotalDonors(data.totalDonors);
         }
       } catch (error) {
         console.error('Error fetching donation data:', error);
@@ -134,7 +99,6 @@ export default function DonorDrop() {
           isNamadaConnected={isNamadaConnected}
           connectMetaMask={connectMetaMask}
           connectNamada={connectNamada}
-          ethRecognized={ethRecognized}
           metaMaskError={metaMaskError}
           namadaError={namadaError}
         />
@@ -179,19 +143,56 @@ function MetamaskInstructions() {
   );
 }
 
-function RecentDonations({ donations }: RecentDonationsProps) {
-  if (donations.length === 0) {
+function RecentDonations({ donations }: Readonly<RecentDonationsProps>) {
+  const [recentDonations, setRecentDonations] = useState<Donation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentDonations = async () => {
+      try {
+        const response = await fetch('/api/scrapetxn');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        
+        // Format the donations from the database
+        const formattedDonations = data.map((donation: any) => ({
+          hash: donation.transaction_hash,
+          message: donation.input_message || 'No message',
+          amount: donation.amount_eth
+        }));
+
+        setRecentDonations(formattedDonations);
+      } catch (error) {
+        console.error('Failed to fetch donations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentDonations();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <h2 className="font-mono mb-4">Recent Donations</h2>
+        <p>Loading donations...</p>
+      </Card>
+    );
+  }
+
+  if (recentDonations.length === 0) {
     return (
       <Card className="p-6">
         <h2 className="font-mono mb-4">Recent Donations</h2>
         <p>No recent donations available.</p>
       </Card>
-      
     );
-    
   }
 
-  const lastDonation = donations[donations.length - 1];
+  const lastDonation = recentDonations[0]; // Get most recent donation
   const shortHash = `${lastDonation.hash.slice(0, 6)}..${lastDonation.hash.slice(-2)}`;
 
   return (
@@ -213,7 +214,6 @@ function RecentDonations({ donations }: RecentDonationsProps) {
       </div>
       <PublicRecentDonation />
     </Card>
-    
   );
 }
 
@@ -230,17 +230,15 @@ function PublicRecentDonation() {
           throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        if (data.data && data.data.length > 0) {
-          const donationData = data.data[0];
-          setPublicDonation({
-            timestamp: donationData[0],
-            message: donationData[1],
-            amount: donationData[2],
-            ethAddress: donationData[4],
-          });
-        } else {
-          setPublicDonation(null);
-        }
+        const { transaction_hash, from_address, amount_eth, namada_key, input_message, timestamp } = data;
+        console.log("Transaction hash: ", transaction_hash);
+        console.log("Namada key: ", namada_key);
+        setPublicDonation({
+          timestamp: timestamp,
+          message: input_message || 'No message',
+          amount: amount_eth,
+          ethAddress: from_address,
+        });
       } catch (error) {
         console.error('Failed to fetch public donation:', error);
         setError('Failed to load public donation.');
@@ -289,47 +287,34 @@ function DonorDropCheck({
   isNamadaConnected,
   connectMetaMask,
   connectNamada,
-  ethRecognized,
   metaMaskError,
   namadaError,
-}: DonorDropCheckProps) {
-  const recognizedAmount = parseFloat(ethRecognized);
-  const minRequiredEth = 0.002;
-  const { signMessage } = useWeb3(); // Add this line to get the signMessage function
-
+}: Readonly<DonorDropCheckProps>) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prepare the message to sign
-    const messageToSign = `I have made donation and submitting claim`;
 
     try {
-      const signature = await signMessage(messageToSign); // Sign the message
-
-      if (signature) {
         // If signing is successful, send the data to the API
         const data = {
-          message,
-          recognizedAmount: ethRecognized,
           namadaAddress,
           ethAddress,
-          signature, // Include the signature
         };
 
-        const response = await fetch('/api/saveToSheet', {
+        const response = await fetch('/api/checkDonation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
 
         if (response.ok) {
-          alert('Message submitted successfully!');
-          setMessage('');
+          const result = await response.json();
+          const {ethAddressTotal, namAddressTotal} = result;
+          alert(`${ethAddressTotal} ETH donated from this address. The target nam address has ${namAddressTotal} eth donations allocated to it so far.`);
         } else {
-          alert('Failed to submit the message. Please try again later.');
+          alert('.');
         }
-      }
     } catch (error) {
       console.error('Error signing the message:', error);
       alert('Failed to sign the message. Please ensure your wallet is connected and try again.');
@@ -351,7 +336,6 @@ function DonorDropCheck({
           >
             {isMetaMaskConnected ? 'MetaMask Connected' : 'Connect to MetaMask'}
           </Button>
-          <span className="text-red-500 font-mono">{ethRecognized} ETH recognized</span>
         </div>
 
         {metaMaskError && <p className="text-red-500 font-mono">{metaMaskError}</p>}
@@ -359,7 +343,7 @@ function DonorDropCheck({
         <div className="space-y-2">
           <label className="block font-mono">Ethereum Address</label>
           <Input
-            value={ethAddress || ''}
+            value={ethAddress ?? ''}
             readOnly
             placeholder="Not connected"
           />
@@ -383,7 +367,7 @@ function DonorDropCheck({
         <div className="space-y-2">
           <label className="block font-mono">Namada Address</label>
           <Input
-            value={namadaAddress || ''}
+            value={namadaAddress ?? ''}
             readOnly
             placeholder="Not connected"
           />
@@ -391,23 +375,13 @@ function DonorDropCheck({
 
         <form onSubmit={handleSubmit}>
           <label className="block font-mono">Message</label>
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message here"
-          />
           <Button
             type="submit"
             className="mt-4"
-            disabled={recognizedAmount < minRequiredEth} // Disable if recognized ETH is less than 0.002
+            disabled={false} // Disable if recognized ETH is less than 0.002
           >
-            Submit
+            Check!
           </Button>
-          {recognizedAmount < minRequiredEth && (
-            <p className="text-red-500 mt-2">
-              You need at least donate 0.002 ETH to submit your message.
-            </p>
-          )}
         </form>
       </div>
     </Card>
