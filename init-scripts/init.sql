@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS donations (
 -- Add index for timestamp-based queries
 CREATE INDEX idx_donations_timestamp ON donations(timestamp);
 
--- Add composite index for timestamp + amount for faster SUM queries
-CREATE INDEX idx_donations_timestamp_amount ON donations(timestamp, amount_eth);
+CREATE INDEX idx_donations_address_timestamp ON donations(from_address, timestamp, amount_eth);
 
 CREATE TABLE IF NOT EXISTS scraped_blocks (
     id SERIAL PRIMARY KEY,

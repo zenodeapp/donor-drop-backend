@@ -16,14 +16,27 @@ const pool = new Pool({
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     const query = `
-      SELECT COALESCE(SUM(amount_eth), 0) as total_sum 
-      FROM donations 
-      WHERE timestamp BETWEEN $1 AND $2
+      WITH valid_donors AS (
+        SELECT from_address
+        FROM donations
+        WHERE timestamp BETWEEN $1 AND $2
+        GROUP BY from_address
+        HAVING SUM(amount_eth) >= 0.03
+      )
+      SELECT COALESCE(SUM(d.amount_eth), 0) as total_sum 
+      FROM donations d
+      INNER JOIN valid_donors v ON d.from_address = v.from_address
+      WHERE d.timestamp BETWEEN $1 AND $2
     `;
 
     try {
       const result = await pool.query(query, [startDate, endDate]);
-      res.status(200).json({ totalSum: result.rows[0].total_sum });
+      const totalSum = parseFloat(result.rows[0].total_sum);
+      
+      // Only return the sum if it's less than 27 ETH
+      const finalSum = totalSum > 27 ? 27 : totalSum;
+      
+      res.status(200).json({ totalSum: finalSum });
     } catch (error) {
       console.error('Error calculating sum:', error);
       res.status(500).json({ error: 'Failed to calculate total' });
