@@ -10,37 +10,77 @@ const pool = new Pool({
     database: process.env.POSTGRES_DB
   });
 
+async function findCutoffTimestamp() {
+  const query = 'SELECT cutoff_timestamp FROM donation_stats';
+  
+  try {
+    const result = await pool.query(query);
+    return result.rows[0]?.cutoff_timestamp || null;
+  } catch (error) {
+    console.error('Error finding cutoff timestamp:', error);
+    throw error;
+  }
+}
+
 async function checkDonation(ethAddress, namAddress) {
-    try {
-      // Query to sum donations by ETH address
-      const ethQuery = `
-        SELECT COALESCE(SUM(amount_eth), 0) as total_eth
+  try {
+    // Query to get both total and eligible donations by ETH address
+
+    const cutoffTimestamp = await findCutoffTimestamp();
+    // Query to get both total and eligible donations by ETH address
+    const ethQuery = `
+      WITH address_total AS (
+        SELECT 
+          COALESCE(SUM(amount_eth), 0) as total_eth,
+          CASE 
+            WHEN SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END) >= 0.03 
+            THEN LEAST(SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END), 0.3)
+            ELSE 0
+          END as eligible_eth
         FROM donations 
         WHERE from_address = $1
-      `;
-  
-      // Query to sum donations by Namada address
-      const namQuery = `
-        SELECT COALESCE(SUM(amount_eth), 0) as total_eth
+      )
+      SELECT total_eth, eligible_eth FROM address_total
+    `;
+
+    // Query to get both total and eligible donations by Namada address
+    const namQuery = `
+      WITH address_total AS (
+        SELECT 
+          COALESCE(SUM(amount_eth), 0) as total_eth,
+          CASE 
+            WHEN SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END) >= 0.03 
+            THEN LEAST(SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END), 0.3)
+            ELSE 0
+          END as eligible_eth
         FROM donations 
         WHERE namada_key = $1
-      `;
-  
-      // Execute both queries in parallel
-      const [ethResult, namResult] = await Promise.all([
-        pool.query(ethQuery, [ethAddress.toLowerCase()]),
-        pool.query(namQuery, [namAddress])
-      ]);
-  
-      return {
-        ethAddressTotal: parseFloat(ethResult.rows[0].total_eth),
-        namAddressTotal: parseFloat(namResult.rows[0].total_eth)
-      };
-    } catch (error) {
-      console.error('Error checking donations:', error);
-      throw error;
-    }
+      )
+      SELECT total_eth, eligible_eth FROM address_total
+    `;
+
+    // Execute both queries in parallel with cutoff timestamp
+    const [ethResult, namResult] = await Promise.all([
+      pool.query(ethQuery, [ethAddress.toLowerCase(), cutoffTimestamp || 'infinity']),
+      pool.query(namQuery, [namAddress, cutoffTimestamp || 'infinity'])
+    ]);
+
+    return {
+      ethAddress: {
+        total: parseFloat(ethResult.rows[0].total_eth),
+        eligible: parseFloat(ethResult.rows[0].eligible_eth)
+      },
+      namadaAddress: {
+        total: parseFloat(namResult.rows[0].total_eth),
+        eligible: parseFloat(namResult.rows[0].eligible_eth)
+      },
+      cutoffTimestamp: cutoffTimestamp
+    };
+  } catch (error) {
+    console.error('Error checking donations:', error);
+    throw error;
   }
+}
 
 export default async function handler(req, res) {
     if (req.method === 'POST') {

@@ -16,18 +16,18 @@ const pool = new Pool({
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     const query = `
-      WITH donor_totals AS (
-        -- First get total per donor, capped at 1.0
+    WITH donor_totals AS (
+        -- First get total per donor, capped at 0.3
         SELECT 
-          from_address,
-          LEAST(SUM(amount_eth), 1.0) as capped_total
+            from_address,
+            LEAST(SUM(amount_eth), 0.3) as capped_total
         FROM donations
         WHERE timestamp BETWEEN $1 AND $2
         GROUP BY from_address
         HAVING SUM(amount_eth) >= 0.03  -- Only include donors who gave at least 0.03
-      )
-      SELECT COALESCE(SUM(capped_total), 0) as total_sum 
-      FROM donor_totals
+    )
+    SELECT COALESCE(SUM(capped_total), 0) as total_sum 
+    FROM donor_totals
     `;
 
     try {
