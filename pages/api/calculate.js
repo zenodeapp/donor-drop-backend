@@ -2,20 +2,33 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 dotenv.config();
 
+const startDate = process.env.SCANNING_START_DATE;
+const endDate = process.env.SCANNING_END_DATE;
+
 const pool = new Pool({
     user: process.env.POSTGRES_USER,
     password: process.env.POSTGRES_PASSWORD,
     host: 'localhost',
     port: 5434,
     database: process.env.POSTGRES_DB
-  });
+});
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
-    const result = await pool.query('SELECT SUM(amount_eth) FROM donations WHERE timestamp > NOW() - INTERVAL \'1 day\'');
-    res.status(200).json({ totalSum: result.rows[0].sum || 0 });
+    const query = `
+      SELECT COALESCE(SUM(amount_eth), 0) as total_sum 
+      FROM donations 
+      WHERE timestamp BETWEEN $1 AND $2
+    `;
+
+    try {
+      const result = await pool.query(query, [startDate, endDate]);
+      res.status(200).json({ totalSum: result.rows[0].total_sum });
+    } catch (error) {
+      console.error('Error calculating sum:', error);
+      res.status(500).json({ error: 'Failed to calculate total' });
     }
-else {
+  } else {
     res.setHeader('Allow', ['GET']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
