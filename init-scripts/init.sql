@@ -9,8 +9,10 @@ CREATE TABLE IF NOT EXISTS donations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index for faster ordering by timestamp
-CREATE INDEX idx_timestamp ON donations(timestamp);
+-- Add index for timestamp-based queries
+CREATE INDEX idx_donations_timestamp ON donations(timestamp);
+
+CREATE INDEX idx_donations_address_timestamp ON donations(from_address, timestamp, amount_eth);
 
 CREATE TABLE IF NOT EXISTS scraped_blocks (
     id SERIAL PRIMARY KEY,
@@ -22,27 +24,37 @@ CREATE TABLE IF NOT EXISTS scraped_blocks (
 -- Create an index for faster block number lookups
 CREATE INDEX idx_block_number ON scraped_blocks(block_number);
 
-CREATE TABLE IF NOT EXISTS temporary_messages (
-    from_address VARCHAR(42) PRIMARY KEY,
-    input_message VARCHAR NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create the function to delete messages older than 10 minutes
-CREATE OR REPLACE FUNCTION delete_old_messages()
-RETURNS TRIGGER AS $$
-BEGIN
-    DELETE FROM temporary_messages
-    WHERE created_at < NOW() - INTERVAL '10 minutes';
-    RETURN NULL; -- No row needs to be returned
-END;
-$$ LANGUAGE plpgsql;
-
--- Create the trigger to call the function after insert or update
-CREATE TRIGGER expire_messages
-AFTER INSERT OR UPDATE ON temporary_messages
-FOR EACH ROW
-EXECUTE FUNCTION delete_old_messages();
+CREATE VIEW donation_stats AS
+WITH donor_totals AS (
+    SELECT 
+        from_address,
+        LEAST(SUM(amount_eth), 0.3) as capped_total
+    FROM donations
+    GROUP BY from_address
+    HAVING SUM(amount_eth) >= 0.03
+),
+running_totals AS (
+    SELECT 
+        d.timestamp,
+        SUM(dt.capped_total) OVER (ORDER BY d.timestamp) as cumulative_sum,
+        SUM(dt.capped_total) OVER () as total_sum
+    FROM donations d
+    INNER JOIN donor_totals dt ON d.from_address = dt.from_address
+    GROUP BY d.timestamp, dt.capped_total
+)
+SELECT 
+    COALESCE(total_sum, 0) as eligible_total_eth,
+    CASE 
+        WHEN MAX(cumulative_sum) >= 27 THEN (
+            SELECT timestamp 
+            FROM running_totals rt2 
+            WHERE rt2.cumulative_sum >= 27 
+            ORDER BY rt2.timestamp ASC 
+            LIMIT 1
+        )
+        ELSE NULL
+    END as cutoff_timestamp
+FROM running_totals;
 
 -- You can add more tables or initial data here
 -- For example:
