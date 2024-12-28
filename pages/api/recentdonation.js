@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   try {
     // Get timestamp from query parameter, default to 0 if not provided
-    const afterTimestamp = req.query.timestamp || '1970-01-01T00:00:00.000Z';
+    const afterTimestamp = req.query.timestamp || '2024-12-27T00:00:00.000Z';
 
     const query = `
       SELECT 
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         timestamp
       FROM donations 
       WHERE timestamp > $1
-      ORDER BY timestamp ASC
+      ORDER BY timestamp DESC
     `;
 
     const result = await pool.query(query, [afterTimestamp]);
