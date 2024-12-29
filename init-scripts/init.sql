@@ -24,37 +24,42 @@ CREATE TABLE IF NOT EXISTS scraped_blocks (
 -- Create an index for faster block number lookups
 CREATE INDEX idx_block_number ON scraped_blocks(block_number);
 
+DROP VIEW IF EXISTS donation_stats;
+
 CREATE VIEW donation_stats AS
-WITH donor_totals AS (
-    SELECT 
+WITH donor_sums AS (
+    SELECT
         from_address,
-        LEAST(SUM(amount_eth), 0.3) as capped_total
+        LEAST(SUM(amount_eth), 0.3) AS capped_total,
+        MIN(timestamp) AS earliest_timestamp
     FROM donations
     GROUP BY from_address
-    HAVING SUM(amount_eth) >= 0.03
+    HAVING SUM(amount_eth) >= 0.03          -- Only donors ≥ 0.03 ETH
 ),
-running_totals AS (
-    SELECT 
-        d.timestamp,
-        SUM(dt.capped_total) OVER (ORDER BY d.timestamp) as cumulative_sum,
-        SUM(dt.capped_total) OVER () as total_sum
-    FROM donations d
-    INNER JOIN donor_totals dt ON d.from_address = dt.from_address
-    GROUP BY d.timestamp, dt.capped_total
+ordered_sums AS (
+    SELECT
+        from_address,
+        capped_total,
+        earliest_timestamp,
+        -- Compute running total in ascending order of first donation
+        SUM(capped_total) OVER (
+            ORDER BY earliest_timestamp
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) AS running_sum
+    FROM donor_sums
 )
-SELECT 
-    COALESCE(total_sum, 0) as eligible_total_eth,
-    CASE 
-        WHEN MAX(cumulative_sum) >= 27 THEN (
-            SELECT timestamp 
-            FROM running_totals rt2 
-            WHERE rt2.cumulative_sum >= 27 
-            ORDER BY rt2.timestamp ASC 
-            LIMIT 1
-        )
-        ELSE NULL
-    END as cutoff_timestamp
-FROM running_totals;
+SELECT
+    -- Total of all capped contributions
+    (SELECT SUM(capped_total) FROM donor_sums) AS eligible_total_eth,
+    -- The first timestamp that makes the running sum >= 27 (or NULL if it never reaches 27)
+    (
+        SELECT earliest_timestamp
+        FROM ordered_sums
+        WHERE running_sum >= 27
+        ORDER BY earliest_timestamp
+        LIMIT 1
+    ) AS cutoff_timestamp;
+
 
 -- You can add more tables or initial data here
 -- For example:
