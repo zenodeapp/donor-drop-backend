@@ -6,7 +6,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Query to get transactions with optional date filtering
     const query = `
       SELECT 
         transaction_hash,

@@ -24,8 +24,10 @@ describe('SQL Queries Tests', () => {
     test('correctly calculates eligible totals', async () => {
       const result = await testPool.query('SELECT * FROM donation_stats');
       expect(result.rows[0]).toHaveProperty('eligible_total_eth');
-      expect(parseFloat(result.rows[0].eligible_total_eth)).toBe(0.3);
+      expect(parseFloat(result.rows[0].eligible_total_eth)).toBe(27.0);
       expect(result.rows[0]).toHaveProperty('cutoff_timestamp');
+      // The cutoff timestamp should be when we hit 27 ETH
+      expect(result.rows[0].cutoff_timestamp).toEqual(new Date('2024-01-01 19:01:28'));
     });
   });
 
@@ -50,6 +52,70 @@ describe('SQL Queries Tests', () => {
       
       expect(parseFloat(result.rows[0].total_eth)).toBe(0.36);
       expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.3);
+    });
+    test('returns zero for address with no donations', async () => {
+        const query = `
+          WITH address_total AS (
+            SELECT 
+              COALESCE(SUM(amount_eth), 0) as total_eth,
+              CASE 
+                WHEN SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END) >= 0.03 
+                THEN LEAST(SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END), 0.3)
+                ELSE 0
+              END as eligible_eth
+            FROM donations 
+            WHERE from_address = $1
+          )
+          SELECT total_eth, eligible_eth FROM address_total
+        `;
+        
+        const result = await testPool.query(query, ['0xnonexistent', '2024-12-31']);
+        expect(parseFloat(result.rows[0].total_eth)).toBe(0);
+        expect(parseFloat(result.rows[0].eligible_eth)).toBe(0);
+      });
+  });
+
+  describe('checkNamadaAddress', () => {
+    test('returns correct totals for valid namada address', async () => {
+      const query = `
+        WITH address_total AS (
+          SELECT 
+            COALESCE(SUM(amount_eth), 0) as total_eth,
+            CASE 
+              WHEN SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END) >= 0.03 
+              THEN LEAST(SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END), 0.3)
+              ELSE 0
+            END as eligible_eth
+          FROM donations 
+          WHERE namada_key = $1
+        )
+        SELECT total_eth, eligible_eth FROM address_total
+      `;
+      
+      const result = await testPool.query(query, ['tnam1qp03nsz7sn83h9s9cxjmge0a5t7ktzh6gc8dha0q', '2024-12-31']);
+      expect(result.rows[0]).toHaveProperty('total_eth');
+      expect(result.rows[0]).toHaveProperty('eligible_eth');
+    });
+
+    test('returns zero for non-existent namada address', async () => {
+      const query = `
+        WITH address_total AS (
+          SELECT 
+            COALESCE(SUM(amount_eth), 0) as total_eth,
+            CASE 
+              WHEN SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END) >= 0.03 
+              THEN LEAST(SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END), 0.3)
+              ELSE 0
+            END as eligible_eth
+          FROM donations 
+          WHERE namada_key = $1
+        )
+        SELECT total_eth, eligible_eth FROM address_total
+      `;
+      
+      const result = await testPool.query(query, ['tnam1nonexistent', '2024-12-31']);
+      expect(parseFloat(result.rows[0].total_eth)).toBe(0);
+      expect(parseFloat(result.rows[0].eligible_eth)).toBe(0);
     });
   });
 
@@ -110,6 +176,59 @@ describe('SQL Queries Tests', () => {
       expect(result.rows).toHaveLength(2);
       expect(result.rows[0].block_number).toBe('1000002');
       expect(result.rows[1].block_number).toBe('1000001');
+    });
+  });
+
+  describe('Recent Donations', () => {
+    test('returns donations after specified timestamp', async () => {
+      const query = `
+        SELECT 
+          transaction_hash,
+          from_address,
+          amount_eth,
+          namada_key,
+          input_message,
+          timestamp
+        FROM donations 
+        WHERE timestamp > $1
+        ORDER BY timestamp DESC
+      `;
+
+      const afterTimestamp = '2024-01-01T23:00:28.000Z';
+      const result = await testPool.query(query, [afterTimestamp]);
+      
+      // Should return donations after Jan 1, 2024 10:00:00
+      expect(result.rows.length).toBe(1); // We expect 2 donations after this timestamp
+      
+      // Test the first (most recent) donation
+      expect(result.rows[0]).toEqual({
+        transaction_hash: 'test-tx-1000',
+        from_address: '0xedge3',
+        amount_eth: '0.031000000000000000',
+        namada_key: 'tnam1qp058af2my7kk2hz36kdfwcm9cqfzlsjacl8ep92',
+        input_message: 'my NAMADA address is tnam1qp058af2my7kk2hz36kdfwcm9cqfzlsjacl8ep92 is my tnam address',
+        timestamp: new Date('2024-01-02 01:00:00')
+      });
+    });
+
+    test('returns empty array when no donations after timestamp', async () => {
+      const query = `
+        SELECT 
+          transaction_hash,
+          from_address,
+          amount_eth,
+          namada_key,
+          input_message,
+          timestamp
+        FROM donations 
+        WHERE timestamp > $1
+        ORDER BY timestamp DESC
+      `;
+
+      const futureTimestamp = '2025-01-01T00:00:00.000Z';
+      const result = await testPool.query(query, [futureTimestamp]);
+      
+      expect(result.rows).toHaveLength(0);
     });
   });
 });

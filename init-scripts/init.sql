@@ -49,8 +49,11 @@ ordered_sums AS (
     FROM donor_sums
 )
 SELECT
-    -- Total of all capped contributions
-    (SELECT SUM(capped_total) FROM donor_sums) AS eligible_total_eth,
+    -- Cap the total at 27 ETH
+    LEAST(
+        (SELECT SUM(capped_total) FROM donor_sums),
+        27.0
+    ) AS eligible_total_eth,
     -- The first timestamp that makes the running sum >= 27 (or NULL if it never reaches 27)
     (
         SELECT earliest_timestamp
