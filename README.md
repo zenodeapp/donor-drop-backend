@@ -34,3 +34,20 @@ Place the JSON key file in the project directory.
 ```bash
 npm run dev
 ```
+
+
+## Testing
+ 
+The testing suite works as follows:
+
+(If you have not already done so, please run `npm install` and set up docker-compose as described above)
+
+The tests will be done against the database specified in the `.env` file. Ideally this would be done against a `.env.test` file, but for the purposes of this project, the `.env` file will be used.
+
+To run the tests, use the following command:
+
+```bash
+npm test -- --detectOpenHandles --verbose
+```
+
+All tests should pass.
