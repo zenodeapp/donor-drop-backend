@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS donations (
     amount_eth DECIMAL(20,18) NOT NULL,
     namada_key VARCHAR(66) NOT NULL,
     input_message VARCHAR,
+    message VARCHAR(100) NULL,
     timestamp TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -68,3 +69,25 @@ SELECT
 -- For example:
 -- INSERT INTO donations (transaction_hash, from_address, amount_eth, timestamp)
 -- VALUES ('0x123...', '0xabc...', 1.5, '2024-03-20 10:00:00');
+
+CREATE TABLE IF NOT EXISTS temporary_messages (
+    from_address VARCHAR(42) PRIMARY KEY,
+    message VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create the function to delete messages older than 10 minutes
+CREATE OR REPLACE FUNCTION delete_old_messages()
+RETURNS TRIGGER AS $$
+BEGIN
+    DELETE FROM temporary_messages
+    WHERE created_at < NOW() - INTERVAL '10 minutes';
+    RETURN NULL; -- No row needs to be returned
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create the trigger to call the function after insert or update
+CREATE TRIGGER expire_messages
+AFTER INSERT OR UPDATE ON temporary_messages
+FOR EACH ROW
+EXECUTE FUNCTION delete_old_messages();
