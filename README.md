@@ -1,40 +1,60 @@
-# NAMADA DONOR DROP
+# Donor Drop Backend
 
-## Overview
+This was initially written by chimmykk and bengtlofgren. All credits go to them! I merely slim-sized it and added additional logic. It is licensed under the MIT-license (see [LICENSE](./LICENSE)).
 
-Namda Donor Drop, claim/verify donation
+# Overview
 
-### Demo
-
-**[Watch the video demo here](https://vimeo.com/1041464145?share=copy)**
+- Contains SQL database which can be setup via Docker
+- Contains scraper which is dependent on the existence of this SQL database.
 
 ## Installation
 
-`npm install`
+### 1. Install dependencies
+```
+npm install
+```
 
-## Setup Instructions
+OR
 
-### 0 Edit the `.env` file, populating all the fields as required
+```
+yarn install
+```
 
-### 1 Setup the postgres database using `docker-compose`
+### 2. Add .env file containing the correct values for these keys
+```
+ETHERSCAN_API_KEY='your_etherscan_api_key'
+ETHERSCAN_BASE_URL='https://api.etherscan.io/api'
+
+SCRAPER_PORT=3001
+SCRAPER_ADDRESS='ethereum_address'
+SCRAPER_START_DATE='2024-01-01'
+SCRAPER_END_DATE='2025-12-31'
+SCRAPER_START_BLOCK='13400000'
+SCRAPER_END_BLOCK='13450000'
+
+POSTGRES_USER='postgres'
+POSTGRES_PASSWORD='admin1234'
+POSTGRES_HOST='localhost'
+POSTGRES_PORT=5434
+POSTGRES_DB='postgres'
+```
+
+> Make sure that the POSTGRES_PORT matches the port in `./docker-compose.yml`
+
+### 3. Setup postgres
 
 ```bash
 docker-compose up -d
 ```
 
-This will setup the correct postgres database running on port 5434. The table created is specified in the `init-scripts/init.sql` file.
+> This will setup the correct postgres database running on POSTGRES_PORT (default port: 5434). The table created is specified in the `init-scripts/init.sql` file.
 In order to view this, use a tool like `pgAdmin` or `dbeaver` to connect to the database using the credentials specified in the `.env` file.
 
-### 3 **Get the JSON Key File**
-
-Place the JSON key file in the project directory.  
-
-### 4 **Run the Application**
+### 4. Run scraper
 
 ```bash
-npm run dev
+node scraper.mjs
 ```
-
 
 ## Testing
  
