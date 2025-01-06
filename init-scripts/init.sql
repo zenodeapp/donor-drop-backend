@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS donations (
     input_message VARCHAR,
     message VARCHAR(100) NULL,
     timestamp TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Add index for timestamp-based queries
@@ -73,7 +73,7 @@ SELECT
 CREATE TABLE IF NOT EXISTS temporary_messages (
     from_address VARCHAR(42) PRIMARY KEY,
     message VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create the function to delete messages older than 10 minutes
