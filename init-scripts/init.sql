@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS donations (
     namada_key VARCHAR(66) NOT NULL,
     input_message VARCHAR,
     message VARCHAR(100) NULL,
-    timestamp TIMESTAMP NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -18,7 +18,7 @@ CREATE INDEX idx_donations_address_timestamp ON donations(from_address, timestam
 CREATE TABLE IF NOT EXISTS scraped_blocks (
     id SERIAL PRIMARY KEY,
     block_number BIGINT UNIQUE NOT NULL,
-    scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    scraped_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     transactions_found INTEGER DEFAULT 0
 );
 
