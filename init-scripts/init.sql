@@ -32,37 +32,38 @@ WITH donor_sums AS (
     SELECT
         from_address,
         LEAST(SUM(amount_eth), 0.3) AS capped_total,
-        MIN(timestamp) AS earliest_timestamp
+        MIN(timestamp) AS earliest_timestamp,
+        MIN(id) AS earliest_id
     FROM donations
     GROUP BY from_address
-    HAVING SUM(amount_eth) >= 0.03          -- Only donors ≥ 0.03 ETH
+    HAVING SUM(amount_eth) >= 0.03
 ),
 ordered_sums AS (
     SELECT
         from_address,
         capped_total,
         earliest_timestamp,
-        -- Compute running total in ascending order of first donation
+        earliest_id,
         SUM(capped_total) OVER (
-            ORDER BY earliest_timestamp
+            ORDER BY earliest_timestamp, earliest_id
             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
         ) AS running_sum
     FROM donor_sums
 )
 SELECT
-    -- Cap the total at 27 ETH
     LEAST(
         (SELECT SUM(capped_total) FROM donor_sums),
         27.0
     ) AS eligible_total_eth,
-    -- The first timestamp that makes the running sum >= 27 (or NULL if it never reaches 27)
-    (
-        SELECT earliest_timestamp
-        FROM ordered_sums
-        WHERE running_sum >= 27
-        ORDER BY earliest_timestamp
-        LIMIT 1
-    ) AS cutoff_timestamp;
+    cutoff.earliest_timestamp AS cutoff_timestamp,
+    cutoff.earliest_id AS cutoff_id
+FROM (
+    SELECT *
+    FROM ordered_sums
+    WHERE running_sum >= 27
+    ORDER BY earliest_timestamp, earliest_id
+    LIMIT 1
+) cutoff;
 
 
 -- You can add more tables or initial data here
