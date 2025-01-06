@@ -21,16 +21,15 @@ yarn install
 ```
 
 ### 2. Add .env file containing the correct values for these keys
-```
+```env
 ETHERSCAN_API_KEY='your_etherscan_api_key'
 ETHERSCAN_BASE_URL='https://api.etherscan.io/api'
 
 SCRAPER_PORT=3001
 SCRAPER_ADDRESS='ethereum_address'
-SCRAPER_START_DATE='2024-01-01'
-SCRAPER_END_DATE='2025-12-31'
-SCRAPER_START_BLOCK='13400000'
-SCRAPER_END_BLOCK='13450000'
+SCRAPER_START_BLOCK='1'
+SCRAPER_START_DATE='2024-12-27T15:00:00Z'
+SCRAPER_END_DATE='2025-01-09T15:00:00Z'
 
 POSTGRES_USER='postgres'
 POSTGRES_PASSWORD='admin1234'
