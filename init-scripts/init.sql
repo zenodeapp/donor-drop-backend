@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS donations (
     message VARCHAR(100) NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP NOT NULL,
+    block_number BIGINT NOT NULL,
+    tx_index INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Add index for timestamp-based queries
@@ -28,40 +32,56 @@ CREATE INDEX idx_block_number ON scraped_blocks(block_number);
 DROP VIEW IF EXISTS donation_stats;
 
 CREATE VIEW donation_stats AS
-WITH donor_sums AS (
-    SELECT
+WITH running_address_totals AS (
+    -- Calculate running totals per address in transaction order
+    SELECT 
+        id,
         from_address,
-        LEAST(SUM(amount_eth), 0.3) AS capped_total,
-        MIN(timestamp) AS earliest_timestamp,
-        MIN(id) AS earliest_id
-    FROM donations
-    GROUP BY from_address
-    HAVING SUM(amount_eth) >= 0.03
-),
-ordered_sums AS (
-    SELECT
-        from_address,
-        capped_total,
-        earliest_timestamp,
-        earliest_id,
-        SUM(capped_total) OVER (
-            ORDER BY earliest_timestamp, earliest_id
+        amount_eth,
+        block_number,
+        tx_index,
+        SUM(amount_eth) OVER (
+            PARTITION BY from_address
+            ORDER BY block_number, tx_index
             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-        ) AS running_sum
-    FROM donor_sums
+        ) as address_total
+    FROM donations
+),
+eligible_amounts AS (
+    -- Calculate eligible amount for each transaction
+    SELECT 
+        id,
+        block_number,
+        tx_index,
+        CASE 
+            WHEN address_total >= 0.03 THEN 
+                LEAST(amount_eth, 0.3)
+            ELSE 0
+        END as eligible_amount
+    FROM running_address_totals
+),
+running_totals AS (
+    -- Calculate running sum of eligible amounts in strict transaction order
+    SELECT 
+        id,
+        block_number,
+        tx_index,
+        eligible_amount,
+        SUM(eligible_amount) OVER (
+            ORDER BY block_number, tx_index
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+        ) as running_total
+    FROM eligible_amounts
 )
 SELECT
-    LEAST(
-        (SELECT SUM(capped_total) FROM donor_sums),
-        27.0
-    ) AS eligible_total_eth,
-    cutoff.earliest_timestamp AS cutoff_timestamp,
-    cutoff.earliest_id AS cutoff_id
+    cutoff.block_number as cutoff_block,
+    cutoff.tx_index as cutoff_tx_index,
+    cutoff.id as cutoff_id
 FROM (
     SELECT *
-    FROM ordered_sums
-    WHERE running_sum >= 27
-    ORDER BY earliest_timestamp, earliest_id
+    FROM running_totals
+    WHERE running_total >= 27
+    ORDER BY block_number, tx_index
     LIMIT 1
 ) cutoff;
 

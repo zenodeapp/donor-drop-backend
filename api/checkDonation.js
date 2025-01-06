@@ -36,22 +36,25 @@ async function findCutoffData() {
 
 async function checkEthAddress(ethAddress, cutoffData) {
   const query = `
-    WITH total_before_cutoff AS (
-      -- Calculate total eligible ETH across ALL accounts before cutoff ID
-      -- This gives us the baseline for calculating remaining allocation
-      SELECT SUM(
+    WITH address_eligibility AS (
+      -- First calculate eligibility per address
+      SELECT from_address,
         CASE 
-          WHEN SUM(amount_eth) OVER (PARTITION BY from_address) >= 0.03 
-          THEN LEAST(SUM(amount_eth) OVER (PARTITION BY from_address), 0.3)
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
           ELSE 0 
-        END
-      ) as total_eligible_eth
+        END as address_eligible
       FROM donations 
       WHERE id < $2
+      GROUP BY from_address
+    ),
+    total_before_cutoff AS (
+      -- Then sum up all eligible amounts
+      SELECT SUM(address_eligible) as total_eligible_eth
+      FROM address_eligibility
     ),
     address_before_cutoff AS (
       -- Calculate THIS address's eligible amount before cutoff
-      -- This is what they've "locked in" before the cutoff transaction
       SELECT 
         CASE 
           WHEN SUM(amount_eth) >= 0.03 
@@ -61,19 +64,25 @@ async function checkEthAddress(ethAddress, cutoffData) {
       FROM donations 
       WHERE from_address = $1 AND id < $2
     ),
+    cutoff_tx AS (
+      -- Get the cutoff transaction if it exists
+      SELECT amount_eth
+      FROM donations
+      WHERE from_address = $1 AND id = $2
+    ),
     address_total AS (
       SELECT 
         COALESCE(SUM(amount_eth), 0) as total_eth,
-        CASE 
-          WHEN id < $2 THEN 
-            -- Pre-cutoff: just their locked-in amount
-            (SELECT address_eligible_eth FROM address_before_cutoff)
-          WHEN id = $2 THEN
-            -- At cutoff: locked-in amount + entire remaining pool
-            (SELECT address_eligible_eth FROM address_before_cutoff) + 
-            (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
-          ELSE 0
-        END as eligible_eth
+        COALESCE(
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
+              (SELECT address_eligible_eth FROM address_before_cutoff) + 
+              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+            ELSE
+              (SELECT address_eligible_eth FROM address_before_cutoff)
+          END,
+          0
+        ) as eligible_eth
       FROM donations 
       WHERE from_address = $1
     )
@@ -90,17 +99,22 @@ async function checkEthAddress(ethAddress, cutoffData) {
 
 async function checkNamadaAddress(namadaAddress, cutoffData) {
   const query = `
-    WITH total_before_cutoff AS (
-      -- Calculate total eligible ETH across ALL accounts before cutoff ID
-      SELECT SUM(
+    WITH address_eligibility AS (
+      -- First calculate eligibility per address
+      SELECT from_address,
         CASE 
-          WHEN SUM(amount_eth) OVER (PARTITION BY from_address) >= 0.03 
-          THEN LEAST(SUM(amount_eth) OVER (PARTITION BY from_address), 0.3)
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
           ELSE 0 
-        END
-      ) as total_eligible_eth
+        END as address_eligible
       FROM donations 
       WHERE id < $2
+      GROUP BY from_address
+    ),
+    total_before_cutoff AS (
+      -- Then sum up all eligible amounts
+      SELECT SUM(address_eligible) as total_eligible_eth
+      FROM address_eligibility
     ),
     address_before_cutoff AS (
       -- Calculate THIS address's eligible amount before cutoff
@@ -113,19 +127,25 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
       FROM donations 
       WHERE namada_key = $1 AND id < $2
     ),
+    cutoff_tx AS (
+      -- Get the cutoff transaction if it exists
+      SELECT amount_eth
+      FROM donations
+      WHERE namada_key = $1 AND id = $2
+    ),
     address_total AS (
       SELECT 
         COALESCE(SUM(amount_eth), 0) as total_eth,
-        CASE 
-          WHEN id < $2 THEN 
-            -- Pre-cutoff: just their locked-in amount
-            (SELECT address_eligible_eth FROM address_before_cutoff)
-          WHEN id = $2 THEN
-            -- At cutoff: locked-in amount + entire remaining pool
-            (SELECT address_eligible_eth FROM address_before_cutoff) + 
-            (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
-          ELSE 0
-        END as eligible_eth
+        COALESCE(
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
+              (SELECT address_eligible_eth FROM address_before_cutoff) + 
+              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+            ELSE
+              (SELECT address_eligible_eth FROM address_before_cutoff)
+          END,
+          0
+        ) as eligible_eth
       FROM donations 
       WHERE namada_key = $1
     )
