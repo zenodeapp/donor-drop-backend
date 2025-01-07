@@ -45,7 +45,7 @@ async function checkEthAddress(ethAddress, cutoffData) {
           ELSE 0 
         END as address_eligible
       FROM donations 
-      WHERE id < $2
+      WHERE block_number <= $2 AND transaction_index < $3
       GROUP BY from_address
     ),
     total_before_cutoff AS (
@@ -62,13 +62,13 @@ async function checkEthAddress(ethAddress, cutoffData) {
           ELSE 0
         END as address_eligible_eth
       FROM donations 
-      WHERE from_address = $1 AND id < $2
+      WHERE from_address = $1 AND block_number <= $2 AND transaction_index < $3
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
       SELECT amount_eth
       FROM donations
-      WHERE from_address = $1 AND id = $2
+      WHERE from_address = $1 AND block_number = $2 AND transaction_index = $3
     ),
     address_total AS (
       SELECT 
