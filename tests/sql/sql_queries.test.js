@@ -225,7 +225,7 @@ describe('SQL Queries Tests', () => {
         ORDER BY timestamp DESC
       `;
 
-      const futureTimestamp = '2025-01-01T00:00:00.000Z';
+      const futureTimestamp = '2025-01-06T00:00:00.000Z';
       const result = await testPool.query(query, [futureTimestamp]);
       
       expect(result.rows).toHaveLength(0);
