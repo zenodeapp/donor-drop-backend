@@ -15,7 +15,7 @@ describe('SQL Queries Tests', () => {
 
   afterAll(async () => {
     // Clean up test data
-    await testPool.query("DELETE FROM donations WHERE transaction_hash LIKE 'test-%'");
+    // await testPool.query("DELETE FROM donations WHERE transaction_hash LIKE 'test-%'");
     await testPool.query("DELETE FROM scraped_blocks WHERE block_number >= 1000000");
     await testPool.end();
   });
@@ -46,7 +46,7 @@ describe('SQL Queries Tests', () => {
           ELSE 0 
         END as address_eligible
       FROM donations 
-      WHERE block_number <= $2 AND tx_index < $3
+      WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
       GROUP BY from_address
     ),
     total_before_cutoff AS (
@@ -63,7 +63,7 @@ describe('SQL Queries Tests', () => {
           ELSE 0
         END as address_eligible_eth
       FROM donations 
-      WHERE from_address = $1 AND block_number <= $2 AND tx_index < $3
+      WHERE from_address = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
@@ -95,6 +95,66 @@ describe('SQL Queries Tests', () => {
       expect(parseFloat(result.rows[0].total_eth)).toBe(0.36);
       expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.3);
     });
+    test('returns correct totals for valid address at cutoff', async () => {
+        const query = `
+      WITH address_eligibility AS (
+      -- First calculate eligibility per address
+      SELECT from_address,
+        CASE 
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
+          ELSE 0 
+        END as address_eligible
+      FROM donations 
+      WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
+      GROUP BY from_address
+    ),
+    total_before_cutoff AS (
+      -- Then sum up all eligible amounts
+      SELECT SUM(address_eligible) as total_eligible_eth
+      FROM address_eligibility
+    ),
+    address_before_cutoff AS (
+      -- Calculate THIS address's eligible amount before cutoff
+      SELECT 
+        CASE 
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
+          ELSE 0
+        END as address_eligible_eth
+      FROM donations 
+      WHERE from_address = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
+    ),
+    cutoff_tx AS (
+      -- Get the cutoff transaction if it exists
+      SELECT amount_eth
+      FROM donations
+      WHERE from_address = $1 AND block_number = $2 AND tx_index = $3
+    ),
+    address_total AS (
+      SELECT 
+        COALESCE(SUM(amount_eth), 0) as total_eth,
+        COALESCE(
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
+              (SELECT address_eligible_eth FROM address_before_cutoff) + 
+              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+            ELSE
+              (SELECT address_eligible_eth FROM address_before_cutoff)
+          END,
+          0
+        ) as eligible_eth
+      FROM donations 
+      WHERE from_address = $1
+    )
+    SELECT total_eth, eligible_eth FROM address_total
+        `;
+        
+        const result = await testPool.query(query, ['0xedge4288', '27', 8]);
+        
+        expect(parseFloat(result.rows[0].total_eth)).toBe(15);
+        expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.269);
+      });
     test('returns zero for address with no donations', async () => {
         const query = `
           WITH address_total AS (
