@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS donations (
     message VARCHAR(100) NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    block_number INTEGER NOT NULL,
+    block_number BIGINT NOT NULL,
     tx_index INTEGER NOT NULL
 );
 
