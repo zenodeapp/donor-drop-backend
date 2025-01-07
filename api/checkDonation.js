@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { MaxInt256 } from 'ethers';
 import { Pool } from 'pg';
 dotenv.config();
 
@@ -11,7 +12,7 @@ const pool = new Pool({
   });
 
 async function findCutoffData() {
-  const query = 'SELECT cutoff_timestamp, cutoff_id FROM donation_stats';
+  const query = 'SELECT cutoff_block, cutoff_tx_index FROM donation_stats';
   
   try {
     const result = await pool.query(query);
@@ -19,14 +20,14 @@ async function findCutoffData() {
     
     if (!row) {
       return {
-        cutoff_timestamp: null,
-        cutoff_id: null
+        cutoff_tx_index: null,
+        cutoff_block: null
       };
     }
 
     return {
-      cutoff_timestamp: row.cutoff_timestamp,
-      cutoff_id: row.cutoff_id
+      cutoff_tx_index: row.cutoff_tx_index,
+      cutoff_block: row.cutoff_block
     };
   } catch (error) {
     console.error('Error finding cutoff data:', error);
@@ -89,7 +90,10 @@ async function checkEthAddress(ethAddress, cutoffData) {
     SELECT total_eth, eligible_eth FROM address_total
   `;
 
-  const result = await pool.query(query, [ethAddress.toLowerCase(), cutoffData.cutoff_id || 'infinity']);
+  const MaxBigInt = BigInt('9223372036854775807');  // for block_number (BIGINT)
+  const MaxInt = 2147483647;                        // for tx_index (INTEGER)
+
+  const result = await pool.query(query, [ethAddress.toLowerCase(), cutoffData.cutoff_block || MaxBigInt.toString(), cutoffData.cutoff_tx_index || MaxInt]);
   
   return {
     total: parseFloat(result.rows[0].total_eth),
