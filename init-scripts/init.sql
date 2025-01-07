@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS donations (
     input_message VARCHAR,
     message VARCHAR(100) NULL,
     timestamp TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     block_number BIGINT NOT NULL,
-    tx_index INTEGER NOT NULL,
+    tx_index INTEGER NOT NULL
 );
 
 -- Add index for timestamp-based queries
