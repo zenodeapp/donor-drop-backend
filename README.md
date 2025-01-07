@@ -20,7 +20,7 @@ OR
 yarn install
 ```
 
-### 2. Add .env file containing the correct values for these keys
+### 2. .env configuration
 Create an .env file in the root. See [.env.example](.env.example) for an example.
 
 ### 3. Setup postgres
