@@ -112,7 +112,7 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
           ELSE 0 
         END as address_eligible
       FROM donations 
-      WHERE id < $2
+      WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
       GROUP BY from_address
     ),
     total_before_cutoff AS (
@@ -129,13 +129,13 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
           ELSE 0
         END as address_eligible_eth
       FROM donations 
-      WHERE namada_key = $1 AND id < $2
+      WHERE namada_key = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
       SELECT amount_eth
       FROM donations
-      WHERE namada_key = $1 AND id = $2
+      WHERE namada_key = $1 AND block_number = $2 AND tx_index = $3
     ),
     address_total AS (
       SELECT 
@@ -156,7 +156,10 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
     SELECT total_eth, eligible_eth FROM address_total
   `;
 
-  const result = await pool.query(query, [namadaAddress, cutoffData.cutoff_id || 'infinity']);
+  const MaxBigInt = BigInt('9223372036854775807');  // for block_number (BIGINT)
+  const MaxInt = 2147483647;        
+
+  const result = await pool.query(query, [namadaAddress, cutoffData.cutoff_block || MaxBigInt.toString(), cutoffData.cutoff_tx_index || MaxInt]);
   
   return {
     total: parseFloat(result.rows[0].total_eth),
