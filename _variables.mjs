@@ -15,5 +15,6 @@ const END_DATE = new Date(
 
 const API_KEY = process.env.ETHERSCAN_API_KEY;
 const BASE_URL = process.env.ETHERSCAN_BASE_URL || 'https://api-sepolia.etherscan.io/api';
+const INFURA = process.env.INFURA_HTTP_URL;
 
-export { ADDRESS, START_BLOCK, START_DATE, END_DATE, API_KEY, BASE_URL };
+export { ADDRESS, START_BLOCK, START_DATE, END_DATE, API_KEY, BASE_URL, INFURA };
