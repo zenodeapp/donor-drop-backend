@@ -13,10 +13,6 @@ const END_DATE = new Date(
   process.env.SCRAPER_END_DATE || "2025-01-09T15:00:00Z"
 );
 
-const API = new Date(
-  process.env.SCRAPER_END_DATE || "2025-01-09T15:00:00Z"
-);
-
 const BASE_URL = process.env.ETHERSCAN_BASE_URL || 'https://api-sepolia.etherscan.io/api';
 
 
