@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS donations (
     message VARCHAR(100) NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    block_number BIGINT NOT NULL,
+    block_number INTEGER NOT NULL,
     tx_index INTEGER NOT NULL
 );
 
@@ -72,9 +72,12 @@ running_totals AS (
     FROM eligible_amounts
 )
 SELECT
+    LEAST(
+        (SELECT MAX(running_total) FROM running_totals),
+        27.0
+    ) as eligible_total_eth,
     cutoff.block_number as cutoff_block,
-    cutoff.tx_index as cutoff_tx_index,
-    cutoff.id as cutoff_id
+    cutoff.tx_index as cutoff_tx_index
 FROM (
     SELECT *
     FROM running_totals

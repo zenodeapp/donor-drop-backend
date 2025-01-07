@@ -25,9 +25,12 @@ describe('SQL Queries Tests', () => {
       const result = await testPool.query('SELECT * FROM donation_stats');
       expect(result.rows[0]).toHaveProperty('eligible_total_eth');
       expect(parseFloat(result.rows[0].eligible_total_eth)).toBe(27.0);
-      expect(result.rows[0]).toHaveProperty('cutoff_timestamp');
+      expect(result.rows[0]).toHaveProperty('cutoff_block');
       // The cutoff timestamp should be when we hit 27 ETH
-      expect(result.rows[0].cutoff_timestamp).toEqual(new Date('2024-01-01 19:01:28'));
+      expect(result.rows[0].cutoff_block).toEqual('27');
+      expect(result.rows[0]).toHaveProperty('cutoff_tx_index');
+      // The cutoff timestamp should be when we hit 27 ETH
+      expect(result.rows[0].cutoff_tx_index).toEqual(8);
     });
   });
 

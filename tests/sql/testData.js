@@ -43,7 +43,9 @@ const additionalTransactions = Array.from({ length: 100 }, (_, i) => {
         amount_eth: '15.0',
         input_message: 'Send to tnam1qp027ekpx7yqkzwm0rwj9uf7rh9qy95aygrd07me',
         namada_key: null,
-        timestamp: `2024-01-01 19:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        timestamp: `2024-01-01 19:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+        block_number: 19 + Math.floor(i / 10),
+        tx_index: i % 10
     };
 });
 
@@ -185,15 +187,19 @@ const scrapedBlocksData = [
           amount_eth, 
           input_message,
           namada_key,
-          timestamp
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          timestamp,
+          block_number,
+          tx_index
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
         donation.transaction_hash,
         donation.from_address,
         donation.amount_eth,
         donation.input_message,
         namadaKey || '', // Use extracted key or null if not found
-        donation.timestamp
+        donation.timestamp,
+        donation.block_number,
+        donation.tx_index
       ]);
     }
   }
