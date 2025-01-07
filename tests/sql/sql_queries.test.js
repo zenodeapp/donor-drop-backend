@@ -15,7 +15,7 @@ describe('SQL Queries Tests', () => {
 
   afterAll(async () => {
     // Clean up test data
-    await testPool.query("DELETE FROM donations WHERE transaction_hash LIKE 'test-%'");
+    // await testPool.query("DELETE FROM donations WHERE transaction_hash LIKE 'test-%'");
     await testPool.query("DELETE FROM scraped_blocks WHERE block_number >= 1000000");
     await testPool.end();
   });
@@ -25,34 +25,136 @@ describe('SQL Queries Tests', () => {
       const result = await testPool.query('SELECT * FROM donation_stats');
       expect(result.rows[0]).toHaveProperty('eligible_total_eth');
       expect(parseFloat(result.rows[0].eligible_total_eth)).toBe(27.0);
-      expect(result.rows[0]).toHaveProperty('cutoff_timestamp');
+      expect(result.rows[0]).toHaveProperty('cutoff_block');
       // The cutoff timestamp should be when we hit 27 ETH
-      expect(result.rows[0].cutoff_timestamp).toEqual(new Date('2024-01-01 19:01:28'));
+      expect(result.rows[0].cutoff_block).toEqual('27');
+      expect(result.rows[0]).toHaveProperty('cutoff_tx_index');
+      // The cutoff timestamp should be when we hit 27 ETH
+      expect(result.rows[0].cutoff_tx_index).toEqual(8);
     });
   });
 
   describe('checkEthAddress', () => {
     test('returns correct totals for valid address', async () => {
       const query = `
-        WITH address_total AS (
-          SELECT 
-            COALESCE(SUM(amount_eth), 0) as total_eth,
-            CASE 
-              WHEN SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END) >= 0.03 
-              THEN LEAST(SUM(CASE WHEN timestamp <= $2 THEN amount_eth ELSE 0 END), 0.3)
-              ELSE 0
-            END as eligible_eth
-          FROM donations 
-          WHERE from_address = $1
-        )
-        SELECT total_eth, eligible_eth FROM address_total
+       WITH address_eligibility AS (
+      -- First calculate eligibility per address
+      SELECT from_address,
+        CASE 
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
+          ELSE 0 
+        END as address_eligible
+      FROM donations 
+      WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
+      GROUP BY from_address
+    ),
+    total_before_cutoff AS (
+      -- Then sum up all eligible amounts
+      SELECT SUM(address_eligible) as total_eligible_eth
+      FROM address_eligibility
+    ),
+    address_before_cutoff AS (
+      -- Calculate THIS address's eligible amount before cutoff
+      SELECT 
+        CASE 
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
+          ELSE 0
+        END as address_eligible_eth
+      FROM donations 
+      WHERE from_address = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
+    ),
+    cutoff_tx AS (
+      -- Get the cutoff transaction if it exists
+      SELECT amount_eth
+      FROM donations
+      WHERE from_address = $1 AND block_number = $2 AND tx_index = $3
+    ),
+    address_total AS (
+      SELECT 
+        COALESCE(SUM(amount_eth), 0) as total_eth,
+        COALESCE(
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
+              (SELECT address_eligible_eth FROM address_before_cutoff) + 
+              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+            ELSE
+              (SELECT address_eligible_eth FROM address_before_cutoff)
+          END,
+          0
+        ) as eligible_eth
+      FROM donations 
+      WHERE from_address = $1
+    )
+    SELECT total_eth, eligible_eth FROM address_total
       `;
       
-      const result = await testPool.query(query, ['0xdbc69e6731975d3aa710d9e2ba85ce14131b6454', '2024-12-31']);
+      const result = await testPool.query(query, ['0xdbc69e6731975d3aa710d9e2ba85ce14131b6454', '27', 8]);
       
       expect(parseFloat(result.rows[0].total_eth)).toBe(0.36);
       expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.3);
     });
+    test('returns correct totals for valid address at cutoff', async () => {
+        const query = `
+      WITH address_eligibility AS (
+      -- First calculate eligibility per address
+      SELECT from_address,
+        CASE 
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
+          ELSE 0 
+        END as address_eligible
+      FROM donations 
+      WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
+      GROUP BY from_address
+    ),
+    total_before_cutoff AS (
+      -- Then sum up all eligible amounts
+      SELECT SUM(address_eligible) as total_eligible_eth
+      FROM address_eligibility
+    ),
+    address_before_cutoff AS (
+      -- Calculate THIS address's eligible amount before cutoff
+      SELECT 
+        CASE 
+          WHEN SUM(amount_eth) >= 0.03 
+          THEN LEAST(SUM(amount_eth), 0.3)
+          ELSE 0
+        END as address_eligible_eth
+      FROM donations 
+      WHERE from_address = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
+    ),
+    cutoff_tx AS (
+      -- Get the cutoff transaction if it exists
+      SELECT amount_eth
+      FROM donations
+      WHERE from_address = $1 AND block_number = $2 AND tx_index = $3
+    ),
+    address_total AS (
+      SELECT 
+        COALESCE(SUM(amount_eth), 0) as total_eth,
+        COALESCE(
+          CASE 
+            WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
+              (SELECT address_eligible_eth FROM address_before_cutoff) + 
+              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+            ELSE
+              (SELECT address_eligible_eth FROM address_before_cutoff)
+          END,
+          0
+        ) as eligible_eth
+      FROM donations 
+      WHERE from_address = $1
+    )
+    SELECT total_eth, eligible_eth FROM address_total
+        `;
+        
+        const result = await testPool.query(query, ['0xedge4288', '27', 8]);
+        
+        expect(parseFloat(result.rows[0].total_eth)).toBe(15);
+        expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.269);
+      });
     test('returns zero for address with no donations', async () => {
         const query = `
           WITH address_total AS (
@@ -225,7 +327,7 @@ describe('SQL Queries Tests', () => {
         ORDER BY timestamp DESC
       `;
 
-      const futureTimestamp = '2025-01-01T00:00:00.000Z';
+      const futureTimestamp = '2025-01-06T00:00:00.000Z';
       const result = await testPool.query(query, [futureTimestamp]);
       
       expect(result.rows).toHaveLength(0);

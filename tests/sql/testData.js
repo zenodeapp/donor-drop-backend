@@ -43,7 +43,9 @@ const additionalTransactions = Array.from({ length: 100 }, (_, i) => {
         amount_eth: '15.0',
         input_message: 'Send to tnam1qp027ekpx7yqkzwm0rwj9uf7rh9qy95aygrd07me',
         namada_key: null,
-        timestamp: `2024-01-01 19:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        timestamp: `2024-01-01 19:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+        block_number: 19 + Math.floor(i / 10),
+        tx_index: i % 10
     };
 });
 
@@ -55,7 +57,9 @@ const testData = {
         amount_eth: '0.06',
         input_message: 'My Namada address is tnam1qp00fewmknqdcu2gwl5zf4qvxn75qm332ypy79xg please',
         namada_key: null,
-        timestamp: '2024-01-01 10:00:00'
+        timestamp: '2024-01-01 10:00:00',
+        block_number: 10,
+        tx_index: 0
       },
       {
         transaction_hash: 'test-tx-2',
@@ -63,7 +67,9 @@ const testData = {
         amount_eth: '0.02',
         input_message: 'Send to tnam1qp027ekpx7yqkzwm0rwj9uf7rh9qy95aygrd07me',
         namada_key: null,
-        timestamp: '2024-01-01 11:00:00'
+        timestamp: '2024-01-01 11:00:00',
+        block_number: 11,
+        tx_index: 0
       },
       {
         transaction_hash: 'test-tx-3',
@@ -71,7 +77,9 @@ const testData = {
         amount_eth: '0.3',
         input_message: 'my tnam123 is tnam1qp03nsz7sn83h9s9cxjmge0a5t7ktzh6gc8dha0q is my address',
         namada_key: null,
-        timestamp: '2024-01-01 12:00:00'
+        timestamp: '2024-01-01 12:00:00',
+        block_number: 12,
+        tx_index: 0
       },
       {
         transaction_hash: 'test-tx-4',
@@ -79,7 +87,9 @@ const testData = {
         amount_eth: '0.02',
         input_message: 'Invalid address tnam1invalid',
         namada_key: null,
-        timestamp: '2024-01-01 13:00:00'
+        timestamp: '2024-01-01 13:00:00',
+        block_number: 13,
+        tx_index: 0
       },
       {
         transaction_hash: 'test-tx-5',
@@ -87,7 +97,9 @@ const testData = {
         amount_eth: '15.0',
         input_message: 'tnam1qpedge1111111111111111111111111111111111',
         namada_key: null,
-        timestamp: '2024-01-01 13:00:00'
+        timestamp: '2024-01-01 13:00:00',
+        block_number: 13,
+        tx_index: 1
       },
       {
         transaction_hash: 'test-tx-6',
@@ -95,7 +107,9 @@ const testData = {
         amount_eth: '15.0',
         input_message: 'tnam1qpedge2222222222222222222222222222222222',
         namada_key: null,
-        timestamp: '2024-01-01 14:00:00'
+        timestamp: '2024-01-01 14:00:00',
+        block_number: 14,
+        tx_index: 0
       },
       {
         transaction_hash: 'test-tx-7',
@@ -103,7 +117,9 @@ const testData = {
         amount_eth: '0.029',
         input_message: 'tnam1qpedge3333333333333333333333333333333333',
         namada_key: null,
-        timestamp: '2024-01-01 15:00:00'
+        timestamp: '2024-01-01 15:00:00',
+        block_number: 15,
+        tx_index: 0
       },
       {
         transaction_hash: 'test-tx-8',
@@ -111,7 +127,9 @@ const testData = {
         amount_eth: '0.031',
         input_message: 'tnam1qpedge3333333333333333333333333333333333',
         namada_key: null,
-        timestamp: '2024-01-01 16:00:00'
+        timestamp: '2024-01-01 16:00:00',
+        block_number: 16,
+        tx_index: 0
       },
       ...additionalTransactions,
       {
@@ -120,7 +138,10 @@ const testData = {
         amount_eth: '0.031',
         input_message: 'my NAMADA address is tnam1qp058af2my7kk2hz36kdfwcm9cqfzlsjacl8ep92 is my tnam address',
         namada_key: null,
-        timestamp: '2024-01-02 01:00:00'}
+        timestamp: '2024-01-02 01:00:00',
+        block_number: 25,
+        tx_index: 0
+      }
     ]
   };
 
@@ -166,15 +187,19 @@ const scrapedBlocksData = [
           amount_eth, 
           input_message,
           namada_key,
-          timestamp
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          timestamp,
+          block_number,
+          tx_index
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
         donation.transaction_hash,
         donation.from_address,
         donation.amount_eth,
         donation.input_message,
         namadaKey || '', // Use extracted key or null if not found
-        donation.timestamp
+        donation.timestamp,
+        donation.block_number,
+        donation.tx_index
       ]);
     }
   }
