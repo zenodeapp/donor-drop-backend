@@ -13,4 +13,11 @@ const END_DATE = new Date(
   process.env.SCRAPER_END_DATE || "2025-01-09T15:00:00Z"
 );
 
-export { ADDRESS, START_BLOCK, START_DATE, END_DATE };
+const API = new Date(
+  process.env.SCRAPER_END_DATE || "2025-01-09T15:00:00Z"
+);
+
+const BASE_URL = process.env.ETHERSCAN_BASE_URL || 'https://api-sepolia.etherscan.io/api';
+
+
+export { ADDRESS, START_BLOCK, START_DATE, END_DATE, BASE_URL };
