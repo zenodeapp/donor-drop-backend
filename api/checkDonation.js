@@ -11,7 +11,7 @@ const pool = new Pool({
   });
 
 async function findCutoffData(finalized = false) {
-  const viewTable = finalized ? 'donation_stats_finalized' : 'donations_stats';
+  const viewTable = finalized ? 'donation_stats_finalized' : 'donation_stats';
   const query = `SELECT cutoff_block, cutoff_tx_index FROM ${viewTable}`;
   
   try {
