@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import { MaxInt256 } from 'ethers';
 import { Pool } from 'pg';
 dotenv.config();
 
@@ -11,8 +10,9 @@ const pool = new Pool({
     database: process.env.POSTGRES_DB
   });
 
-async function findCutoffData() {
-  const query = 'SELECT cutoff_block, cutoff_tx_index FROM donation_stats';
+async function findCutoffData(finalized = false) {
+  const viewTable = finalized ? 'donation_stats_finalized' : 'donations';
+  const query = `SELECT cutoff_block, cutoff_tx_index FROM ${viewTable}`;
   
   try {
     const result = await pool.query(query);
@@ -35,7 +35,8 @@ async function findCutoffData() {
   }
 }
 
-async function checkEthAddress(ethAddress, cutoffData) {
+async function checkEthAddress(ethAddress, cutoffData, finalized = false) {
+  const table = finalized ? 'donations_finalized' : 'donations';
   const query = `
     WITH address_eligibility AS (
       -- First calculate eligibility per address
@@ -45,7 +46,7 @@ async function checkEthAddress(ethAddress, cutoffData) {
           THEN LEAST(SUM(amount_eth), 0.3)
           ELSE 0 
         END as address_eligible
-      FROM donations 
+      FROM ${table} 
       WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
       GROUP BY from_address
     ),
@@ -62,13 +63,13 @@ async function checkEthAddress(ethAddress, cutoffData) {
           THEN LEAST(SUM(amount_eth), 0.3)
           ELSE 0
         END as address_eligible_eth
-      FROM donations 
+      FROM ${table} 
       WHERE from_address = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
       SELECT amount_eth
-      FROM donations
+      FROM ${table}
       WHERE from_address = $1 AND block_number = $2 AND tx_index = $3
     ),
     address_total AS (
@@ -84,7 +85,7 @@ async function checkEthAddress(ethAddress, cutoffData) {
           END,
           0
         ) as eligible_eth
-      FROM donations 
+      FROM ${table} 
       WHERE from_address = $1
     )
     SELECT total_eth, eligible_eth FROM address_total
@@ -101,7 +102,8 @@ async function checkEthAddress(ethAddress, cutoffData) {
   };
 }
 
-async function checkNamadaAddress(namadaAddress, cutoffData) {
+async function checkNamadaAddress(namadaAddress, cutoffData, finalized = false) {
+  const table = finalized ? 'donations_finalized' : 'donations';
   const query = `
     WITH address_eligibility AS (
       -- First calculate eligibility per address
@@ -111,7 +113,7 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
           THEN LEAST(SUM(amount_eth), 0.3)
           ELSE 0 
         END as address_eligible
-      FROM donations 
+      FROM ${table} 
       WHERE block_number < $2 OR (block_number = $2 AND tx_index < $3)
       GROUP BY from_address
     ),
@@ -128,13 +130,13 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
           THEN LEAST(SUM(amount_eth), 0.3)
           ELSE 0
         END as address_eligible_eth
-      FROM donations 
+      FROM ${table} 
       WHERE namada_key = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
       SELECT amount_eth
-      FROM donations
+      FROM ${table}
       WHERE namada_key = $1 AND block_number = $2 AND tx_index = $3
     ),
     address_total AS (
@@ -150,7 +152,7 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
           END,
           0
         ) as eligible_eth
-      FROM donations 
+      FROM ${table} 
       WHERE namada_key = $1
     )
     SELECT total_eth, eligible_eth FROM address_total
@@ -167,14 +169,14 @@ async function checkNamadaAddress(namadaAddress, cutoffData) {
   };
 }
 
-async function checkDonation(ethAddress = null, namAddress = null) {
+async function checkDonation(ethAddress = null, namAddress = null, isFinalized = false) {
   try {
-    const cutoffData = await findCutoffData();
+    const cutoffData = await findCutoffData(isFinalized);
 
     // Check addresses based on what was provided
     const [ethResult, namResult] = await Promise.all([
-      ethAddress ? checkEthAddress(ethAddress, cutoffData) : null,
-      namAddress ? checkNamadaAddress(namAddress, cutoffData) : null
+      ethAddress ? checkEthAddress(ethAddress, cutoffData, isFinalized) : null,
+      namAddress ? checkNamadaAddress(namAddress, cutoffData, isFinalized) : null
     ]);
 
     const { cutoffTimestamp } = cutoffData;
@@ -191,7 +193,7 @@ async function checkDonation(ethAddress = null, namAddress = null) {
 
 export default async function handler(req, res) {
   if (req.method === 'POST') {
-    const { ethAddress, namadaAddress } = req.body;
+    const { ethAddress, namadaAddress, isFinalized } = req.body;
     
     // Validate that at least one address is provided
     if (!ethAddress && !namadaAddress) {
@@ -203,7 +205,8 @@ export default async function handler(req, res) {
     try {
       const result = await checkDonation(
         ethAddress || null, 
-        namadaAddress || null
+        namadaAddress || null,
+        isFinalized || false,
       );
       res.status(200).json(result);
     } catch (error) {
