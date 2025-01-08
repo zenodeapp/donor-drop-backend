@@ -11,7 +11,7 @@ const pool = new Pool({
   });
 
 async function findCutoffData(finalized = false) {
-  const viewTable = finalized ? 'donation_stats_finalized' : 'donations';
+  const viewTable = finalized ? 'donation_stats_finalized' : 'donations_stats';
   const query = `SELECT cutoff_block, cutoff_tx_index FROM ${viewTable}`;
   
   try {
@@ -64,13 +64,13 @@ async function checkEthAddress(ethAddress, cutoffData, finalized = false) {
           ELSE 0
         END as address_eligible_eth
       FROM ${table} 
-      WHERE from_address = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
+      WHERE lower(from_address) = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
       SELECT amount_eth
       FROM ${table}
-      WHERE from_address = $1 AND block_number = $2 AND tx_index = $3
+      WHERE lower(from_address) = $1 AND block_number = $2 AND tx_index = $3
     ),
     address_total AS (
       SELECT 
@@ -86,7 +86,7 @@ async function checkEthAddress(ethAddress, cutoffData, finalized = false) {
           0
         ) as eligible_eth
       FROM ${table} 
-      WHERE from_address = $1
+      WHERE lower(from_address) = $1
     )
     SELECT total_eth, eligible_eth FROM address_total
   `;
@@ -131,13 +131,13 @@ async function checkNamadaAddress(namadaAddress, cutoffData, finalized = false) 
           ELSE 0
         END as address_eligible_eth
       FROM ${table} 
-      WHERE namada_key = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
+      WHERE lower(namada_key) = $1 AND (block_number < $2 OR (block_number = $2 AND tx_index < $3))
     ),
     cutoff_tx AS (
       -- Get the cutoff transaction if it exists
       SELECT amount_eth
       FROM ${table}
-      WHERE namada_key = $1 AND block_number = $2 AND tx_index = $3
+      WHERE lower(namada_key) = $1 AND block_number = $2 AND tx_index = $3
     ),
     address_total AS (
       SELECT 
@@ -153,7 +153,7 @@ async function checkNamadaAddress(namadaAddress, cutoffData, finalized = false) 
           0
         ) as eligible_eth
       FROM ${table} 
-      WHERE namada_key = $1
+      WHERE lower(namada_key) = $1
     )
     SELECT total_eth, eligible_eth FROM address_total
   `;
@@ -161,7 +161,7 @@ async function checkNamadaAddress(namadaAddress, cutoffData, finalized = false) 
   const MaxBigInt = BigInt('9223372036854775807');  // for block_number (BIGINT)
   const MaxInt = 2147483647;        
 
-  const result = await pool.query(query, [namadaAddress, cutoffData.cutoff_block || MaxBigInt.toString(), cutoffData.cutoff_tx_index || MaxInt]);
+  const result = await pool.query(query, [namadaAddress.toLowerCase(), cutoffData.cutoff_block || MaxBigInt.toString(), cutoffData.cutoff_tx_index || MaxInt]);
   
   return {
     total: parseFloat(result.rows[0].total_eth),
