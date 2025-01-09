@@ -56,6 +56,19 @@ CREATE TABLE IF NOT EXISTS scraped_blocks_finalized (
 -- Create an index for faster block number lookups
 CREATE INDEX idx_block_number_finalized ON scraped_blocks_finalized(block_number);
 
+CREATE OR REPLACE VIEW combined_donations AS
+WITH last_finalized_block AS (
+    SELECT COALESCE(MAX(block_number), 0) as block_height
+    FROM scraped_blocks_finalized
+)
+SELECT *
+FROM donations_finalized 
+WHERE block_number <= (SELECT block_height FROM last_finalized_block)
+UNION
+SELECT *
+FROM donations 
+WHERE block_number > (SELECT block_height FROM last_finalized_block);
+
 DROP VIEW IF EXISTS donation_stats;
 
 CREATE VIEW donation_stats AS
