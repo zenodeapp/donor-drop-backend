@@ -85,7 +85,7 @@ WITH running_address_totals AS (
             ORDER BY block_number, tx_index
             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
         ) as address_total
-    FROM donations
+    FROM combined_donations
 ),
 eligible_amounts AS (
     -- Calculate eligible amount for each transaction
