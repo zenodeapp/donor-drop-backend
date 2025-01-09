@@ -13,7 +13,10 @@ const END_DATE = new Date(
   process.env.SCRAPER_END_DATE || "2025-01-09T15:00:00Z"
 );
 
-const API_KEY = process.env.ETHERSCAN_API_KEY;
-const BASE_URL = process.env.ETHERSCAN_BASE_URL || 'https://api-sepolia.etherscan.io/api';
+const ETHERSCAN_BASE_URL = process.env.ETHERSCAN_BASE_URL || 'https://api-sepolia.etherscan.io/api';
+const INFURA_BASE_URL = process.env.INFURA_BASE_URL || 'https://sepolia.infura.io/v3';
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY;
+const INFURA_API_KEY = process.env.INFURA_API_KEY;
+const VERBOSE_LOGGING = process.env.VERBOSE_LOGGING === "true";
 
-export { ADDRESS, START_BLOCK, START_DATE, END_DATE, API_KEY, BASE_URL };
+export { ADDRESS, START_BLOCK, START_DATE, END_DATE, ETHERSCAN_BASE_URL, INFURA_BASE_URL, ETHERSCAN_API_KEY, INFURA_API_KEY, VERBOSE_LOGGING };
