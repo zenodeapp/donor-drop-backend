@@ -14,11 +14,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
-      - shared_network # Make sure this network is the same as the one for the frontend
+      - your_shared_network # Make sure this network is the same as the one for the frontend
 
 volumes:
   postgres_data:
 
 networks:
-  shared_network: # Same goes for here
+  your_shared_network: # Do not forget to rename it here as well
     external: true
