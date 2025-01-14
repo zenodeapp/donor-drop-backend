@@ -34,6 +34,10 @@ In order to view this, use a tool like `pgAdmin` or `dbeaver` to connect to the 
 
 ### 4. Run scraper
 
+> [!IMPORTANT]
+>
+> For now I'm using a separate systemctl service to run the scraper. See issue [#22](https://github.com/zenodeapp/donor-drop-backend/issues/22).
+
 ```bash
 node scraper.mjs
 ```
