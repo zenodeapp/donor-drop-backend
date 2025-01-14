@@ -29,14 +29,26 @@ Create an .env file in the root. See [.env.example](.env.example) for an example
 docker-compose up -d
 ```
 
-> This will setup the correct postgres database running on POSTGRES_PORT (default port: 5434). The table created is specified in the `init-scripts/init.sql` file.
-In order to view this, use a tool like `pgAdmin` or `dbeaver` to connect to the database using the credentials specified in the `.env` file.
+This will setup the correct postgres database running on `POSTGRES_PORT` (default port: 5434). The tables and views that will get created are specified in the [init-scripts/init.sql](./init-scripts/init.sql) file.
+
+For easy access to the database, you could use a tool like `pgAdmin` or `dbeaver` using the credentials specified in your .env file.
+
+> [!NOTE]
+>
+> For a quick reset you could use the script [`clean-start.sh`](./clean-start.sh).
+> 
+> **IMPORTANT:** this will wipe the ENTIRE database.
+
 
 ### 4. Run scraper
 
 ```bash
 node scraper.mjs
 ```
+
+> [!IMPORTANT]
+>
+> For now you could use a separate systemctl service to run the scraper. See issue [#22](https://github.com/zenodeapp/donor-drop-backend/issues/22) for a template.
 
 ## Testing
  

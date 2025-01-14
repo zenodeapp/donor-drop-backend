@@ -1,4 +1,5 @@
-version: '3.8'
+version: "3.8"
+
 services:
   db:
     image: postgres:latest
@@ -8,10 +9,16 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - '5434:5432'
+      - "5434:5432" # Optional, expose PostgreSQL to external systems if needed
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d    # Add this line
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - your_shared_network # Make sure this network is the same as the one for the frontend
 
 volumes:
   postgres_data:
+
+networks:
+  your_shared_network: # Do not forget to rename it here as well
+    external: true
