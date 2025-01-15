@@ -25,6 +25,8 @@ Create an .env file in the root. See [.env.example](.env.example) for an example
 
 ### 3. Setup postgres
 
+Before continuing, read the comments in the [docker-compose.yml](./docker-compose.yml) file and configure this properly.
+
 ```bash
 docker-compose up -d
 ```
