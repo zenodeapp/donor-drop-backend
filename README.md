@@ -1,6 +1,6 @@
 # Donor Drop Backend
 
-This was initially written by chimmykk and bengtlofgren. All credits go to them! I merely slim-sized it and added additional logic. It is licensed under the MIT-license (see [LICENSE](./LICENSE)).
+This was initially written by chimmykk and bengtlofgren. It has been optimized, bug-fixed, and enhanced with additional logic to meet the requirements of the donor drop campaign and the official frontend. This project is licensed under the MIT-license (see [LICENSE](./LICENSE)).
 
 # Overview
 
