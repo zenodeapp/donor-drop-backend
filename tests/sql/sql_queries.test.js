@@ -24,12 +24,12 @@ describe('SQL Queries Tests', () => {
     test('correctly calculates eligible totals', async () => {
       const result = await testPool.query('SELECT * FROM donation_stats');
       expect(result.rows[0]).toHaveProperty('eligible_total_eth');
-      expect(parseFloat(result.rows[0].eligible_total_eth)).toBe(27.0);
+      expect(parseFloat(result.rows[0].eligible_total_eth)).toBe(30.0);
       expect(result.rows[0]).toHaveProperty('cutoff_block');
-      // The cutoff timestamp should be when we hit 27 ETH
-      expect(result.rows[0].cutoff_block).toEqual('27');
+      // The cutoff timestamp should be when we hit 30 ETH
+      expect(result.rows[0].cutoff_block).toEqual('30');
       expect(result.rows[0]).toHaveProperty('cutoff_tx_index');
-      // The cutoff timestamp should be when we hit 27 ETH
+      // The cutoff timestamp should be when we hit 30 ETH
       expect(result.rows[0].cutoff_tx_index).toEqual(8);
     });
   });
@@ -78,7 +78,7 @@ describe('SQL Queries Tests', () => {
           CASE 
             WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
               (SELECT address_eligible_eth FROM address_before_cutoff) + 
-              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+              (30.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
             ELSE
               (SELECT address_eligible_eth FROM address_before_cutoff)
           END,
@@ -90,7 +90,7 @@ describe('SQL Queries Tests', () => {
     SELECT total_eth, eligible_eth FROM address_total
       `;
       
-      const result = await testPool.query(query, ['0xdbc69e6731975d3aa710d9e2ba85ce14131b6454', '27', 8]);
+      const result = await testPool.query(query, ['0xdbc69e6731975d3aa710d9e2ba85ce14131b6454', '30', 8]);
       
       expect(parseFloat(result.rows[0].total_eth)).toBe(0.36);
       expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.3);
@@ -138,7 +138,7 @@ describe('SQL Queries Tests', () => {
           CASE 
             WHEN EXISTS (SELECT 1 FROM cutoff_tx) THEN
               (SELECT address_eligible_eth FROM address_before_cutoff) + 
-              (27.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
+              (30.0 - (SELECT total_eligible_eth FROM total_before_cutoff))
             ELSE
               (SELECT address_eligible_eth FROM address_before_cutoff)
           END,
@@ -150,7 +150,7 @@ describe('SQL Queries Tests', () => {
     SELECT total_eth, eligible_eth FROM address_total
         `;
         
-        const result = await testPool.query(query, ['0xedge4288', '27', 8]);
+        const result = await testPool.query(query, ['0xedge4288', '30', 8]);
         
         expect(parseFloat(result.rows[0].total_eth)).toBe(15);
         expect(parseFloat(result.rows[0].eligible_eth)).toBe(0.269);

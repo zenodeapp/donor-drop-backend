@@ -59,7 +59,7 @@ CREATE INDEX idx_block_number_finalized ON scraped_blocks_finalized(block_number
 -- params table (TODO: useful for the next iteration, see issue #15)
 -- CREATE TABLE IF NOT EXISTS params
 -- (
--- global_eth_cap DECIMAL DEFAULT 27,
+-- global_eth_cap DECIMAL DEFAULT 30,
 -- individual_eth_minimum DECIMAL DEFAULT 0.03,
 -- individual_eth_cap DECIMAL DEFAULT 0.3,
 -- reward_nam INTEGER DEFAULT 1000000,
@@ -273,18 +273,18 @@ SELECT id, from_address, amount_eth,
 block_number, tx_index,
 --this is where we do the cool stuff
 CASE 
-WHEN global_total > 27.0 AND global_total - eligible_amount < 27.0
+WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
 -- previous global total = global_total less eligible_amount
-THEN 27.0 - (global_total - eligible_amount)
-WHEN global_total > 27.0 THEN 0
+THEN 30.0 - (global_total - eligible_amount)
+WHEN global_total > 30.0 THEN 0
 ELSE eligible_amount 
 END as eligible_amount,
 
 CASE 
-WHEN global_total > 27.0 AND global_total - eligible_amount < 27.0
+WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
 -- previous global total = global_total less eligible_amount
-THEN 27.0 - (global_total - eligible_amount)
-WHEN global_total > 27.0 THEN 0
+THEN 30.0 - (global_total - eligible_amount)
+WHEN global_total > 30.0 THEN 0
 ELSE amount_eth
 END as adjusted_amount_eth
 
@@ -307,18 +307,18 @@ SELECT id, from_address, amount_eth,
 block_number, tx_index,
 --this is where we do the cool stuff
 CASE 
-WHEN global_total > 27.0 AND global_total - eligible_amount < 27.0
+WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
 -- previous global total = global_total less eligible_amount
-THEN 27.0 - (global_total - eligible_amount)
-WHEN global_total > 27.0 THEN 0
+THEN 30.0 - (global_total - eligible_amount)
+WHEN global_total > 30.0 THEN 0
 ELSE eligible_amount 
 END as eligible_amount,
 
 CASE 
-WHEN global_total > 27.0 AND global_total - eligible_amount < 27.0
+WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
 -- previous global total = global_total less eligible_amount
-THEN 27.0 - (global_total - eligible_amount)
-WHEN global_total > 27.0 THEN 0
+THEN 30.0 - (global_total - eligible_amount)
+WHEN global_total > 30.0 THEN 0
 ELSE amount_eth
 END as adjusted_amount_eth
 
@@ -331,14 +331,14 @@ ORDER BY 1;
 
 CREATE VIEW eligible_addresses AS
 
--- query name eligible addresses (new version for topping tx capped up to 27 exactly)
+-- query name eligible addresses (new version for topping tx capped up to 30 exactly)
 
 SELECT * FROM address_totals
 WHERE eligible_amount > 0;
 
 CREATE VIEW eligible_addresses_finalized AS
 
--- query name eligible addresses (new version for topping tx capped up to 27 exactly)
+-- query name eligible addresses (new version for topping tx capped up to 30 exactly)
 
 SELECT * FROM address_totals_finalized
 WHERE eligible_amount > 0;
@@ -361,13 +361,13 @@ COUNT(distinct from_address) AS eligible_addresses
 
 FROM the_full_table
 WHERE eligible_amount > 0 AND
-global_total - amount_eth < 27
+global_total - amount_eth < 30
 )
 
 SELECT
     LEAST(
         (SELECT MAX(global_total) FROM the_full_table),
-        27.0
+        30.0
     ) as eligible_total_eth,
 (SELECT total_eth_donated from temp),
 
@@ -382,7 +382,7 @@ SELECT
 FROM (
     SELECT *
     FROM the_full_table
-    WHERE global_total >= 27
+    WHERE global_total >= 30
     ORDER BY block_number, tx_index
     LIMIT 1
 ) cutoff
@@ -398,7 +398,7 @@ SELECT (SELECT MAX(global_total) FROM the_full_table) as eligible_total_eth,
 WHERE (SELECT COUNT(*) FROM
 (SELECT *
     FROM the_full_table
-    WHERE global_total >= 27
+    WHERE global_total >= 30
     ORDER BY block_number, tx_index
     LIMIT 1) cutoff1)
  < 1;
@@ -421,13 +421,13 @@ COUNT(distinct from_address) AS eligible_addresses
 
 FROM the_finalized_transactions_full_table
 WHERE eligible_amount > 0 AND 
-global_total - amount_eth < 27
+global_total - amount_eth < 30
 )
 
 SELECT
     LEAST(
         (SELECT MAX(global_total) FROM the_finalized_transactions_full_table),
-        27.0
+        30.0
     ) as eligible_total_eth,
 (SELECT total_eth_donated from temp),
 
@@ -442,7 +442,7 @@ SELECT
 FROM (
     SELECT *
     FROM the_finalized_transactions_full_table
-    WHERE global_total >= 27
+    WHERE global_total >= 30
     ORDER BY block_number, tx_index
     LIMIT 1
 ) cutoff
@@ -458,7 +458,7 @@ SELECT (SELECT MAX(global_total) FROM the_finalized_transactions_full_table) as 
 WHERE (SELECT COUNT(*) FROM
 (SELECT *
     FROM the_finalized_transactions_full_table
-    WHERE global_total >= 27
+    WHERE global_total >= 30
     ORDER BY block_number, tx_index
     LIMIT 1) cutoff1)
- < 1
+ < 1;
