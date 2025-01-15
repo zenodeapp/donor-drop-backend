@@ -12,7 +12,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
-      - your_shared_network # Make sure this network is the same as the one for the frontend
+      - your_shared_network # In order for the backend to communicate with the frontend, we need a network. Make sure this points to the same in the frontend's docker-compose.yml file (this network should be created using the command `docker network create your_shared_network`)
 
 volumes:
   postgres_data:
