@@ -126,9 +126,9 @@ DROP VIEW IF EXISTS eligible_addresses_finalized;
 DROP VIEW IF EXISTS donation_stats;
 DROP VIEW IF EXISTS donation_stats_finalized;
 DROP VIEW IF EXISTS filtered_etherscan_not_in_db;
-DROP VIEW IF EXISTS private_suggested_eligible_addresses;
-DROP VIEW IF EXISTS private_above_cap_in_db_eligibles;
-DROP VIEW IF EXISTS private_etherscan_not_in_db_eligibles;
+DROP VIEW IF EXISTS private_result_eligible_addresses_finalized_in_db;
+DROP VIEW IF EXISTS private_result_above_cap_addresses_in_db;
+DROP VIEW IF EXISTS private_result_addresses_not_in_db;
 
 CREATE VIEW combined_donations AS
 WITH temp AS (
@@ -373,6 +373,7 @@ END as adjusted_amount_eth
 GROUP BY from_address
 ORDER BY 1;
 
+-- running view of eligible addresses from non-finalized tables
 CREATE VIEW eligible_addresses AS
 
 -- query name eligible addresses (new version for topping tx capped up to 30 exactly)
@@ -380,6 +381,7 @@ CREATE VIEW eligible_addresses AS
 SELECT * FROM address_totals
 WHERE eligible_amount > 0;
 
+-- running view of eligible addresses from finalized tables. note: the private_results views provide more rich results here
 CREATE VIEW eligible_addresses_finalized AS
 
 -- query name eligible addresses (new version for topping tx capped up to 30 exactly)
@@ -516,7 +518,8 @@ SELECT transaction_hash from donations_finalized
 
 );
 
-CREATE VIEW private_suggested_eligible_addresses AS
+--eligible addresses within drop rules as recorded in db and address totals finalized table
+CREATE VIEW private_result_eligible_addresses_finalized_in_db AS
 
 -- query name suggested eligible addresses (new version for topping tx capped up to 30 exactly)
 WITH temp AS (
@@ -534,7 +537,8 @@ SELECT
 FROM address_totals_finalized
 WHERE eligible_amount > 0;
 
-CREATE VIEW private_above_cap_in_db_eligibles AS
+--addresses in db who would otherwise have been eligible within contest rules with specified amounts if they had not been submitted after global cap was reached
+CREATE VIEW private_result_above_cap_addresses_in_db AS
 
 -- query name suggested eligible addresses (new version for topping tx capped up to 30 exactly)
 WITH temp AS (
@@ -550,10 +554,11 @@ SELECT
 FROM address_totals_finalized
 WHERE eligible_above_cap > 0;
 
+--addresses which were not recorded in db (presumably as lacking proper tnam in memo) but did donate within the period we scraped for in etherscan_transactions_all and are not in the abovementioned categories
+CREATE VIEW private_result_addresses_not_in_db AS
 
--- The 0.01 conditions are unsafe and were introduced as a temporary solution for the data in Donor Drop 1.
+-- The 0.01 conditions in this view are unsafe and were introduced as a temporary solution for the data in Donor Drop 1.
 -- TODO: If this view gets used, it will need a revision.
-CREATE VIEW private_etherscan_not_in_db_eligibles AS
 
 WITH temp AS (
   SELECT SUM(amount_eth) AS total_sum
