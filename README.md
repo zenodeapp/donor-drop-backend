@@ -73,11 +73,11 @@ There are currently two flags one could run the scraper with:
   
   > This flag will act as if `--once` is set as well.
 
-  This will get all transactions made in the given timeframe (defined in the `.env`-file) **without doing any tnam validation**. This is useful if people made mistakes during the donor drop and we want to give them the opportunity to link their tnams again (using https://github.com/zenodeapp/donor-drop-frontend/tree/with-link). Advised is to only run this command ~30 minutes after the donor drop ended to prevent picking up transactions from `unfinalized` blocks.
+  This will get all transactions made in the given timeframe (defined in the [.env](./.env.example)-file) **without doing any tnam validation**. This is useful if people made mistakes during the donor drop and we want to give them the opportunity to link their tnams again (using https://github.com/zenodeapp/donor-drop-frontend/tree/with-link). Advised is to only run this command ~30 minutes after the donor drop ended to prevent picking up transactions from `unfinalized` blocks.
 
   > The resulting list of transactions will populate the `etherscan_transactions_all`-table instead of the usual `donations`-tables.
 
-## Exporting results
+## Results
 
 - List of perfect users (the TOTAL SUM of these will equal the target ETH amount or less if the target was not reached):
 
@@ -91,14 +91,27 @@ There are currently two flags one could run the scraper with:
   copy(SELECT from_address, tnam, eligible_above_cap as eth, suggested_nam FROM private_result_above_cap_addresses_in_db) To '/var/lib/postgresql/private_result_above_cap_addresses_in_db.csv' With CSV DELIMITER ',' HEADER;
   ```
 
-- List of users who were initially not included due to mistakes, but got corrected using (`--all-etherscan-txs` and https://github.com/zenodeapp/donor-drop-frontend/tree/with-link):
+- List of users who were initially not included due to mistakes, but got corrected using [A.1 Rescue plan](https://github.com/zenodeapp/donor-drop-backend/edit/main/README.md#a1-rescue-plan):
 
   ```sql
   copy(SELECT from_address, tnam, sig_hash, total_eth as eth, suggested_nam FROM private_result_addresses_not_in_db) To '/var/lib/postgresql/private_result_addresses_not_in_db.csv' With CSV DELIMITER ',' HEADER;
   ```
 
-## Testing
- 
+## Appendix
+
+### A.1 Rescue plan
+
+If there are people who messed up their donation, the following can be done:
+
+1. Wait for approx. 30 minutes after the donor drop ended (to make sure all eth blocks are in a `finalized` state).
+2. Run ```node scraper.mjs --all-etherscan-txs```.
+3. Double-check the data this command gathered in the `etherscan_transactions_all`-table. It should contain every transaction done between `SCRAPER_START_DATE` and `SCRAPER_END_DATE` (see: [.env](./.env.example)).
+4. Switch the frontend to the [`with-link`](https://github.com/zenodeapp/donor-drop-frontend/tree/with-link)-branch and re-deploy it.
+5. Let people link their tnam addresses using the frontend (this will only allow ethereum addresses that made a mistake during their donation).
+6. Keep track of the results by checking `unaccounted_addresses` or `private_result_addresses_not_in_db`.
+
+### A.2 Testing
+
 The testing suite works as follows:
 
 (If you have not already done so, please run `npm install` and set up docker-compose as described above)
