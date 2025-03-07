@@ -36,6 +36,25 @@ CREATE INDEX idx_donations_finalized_timestamp ON donations_finalized(timestamp)
 
 CREATE INDEX idx_donations_finalized_address_timestamp ON donations_finalized(from_address, timestamp, amount_eth);
 
+CREATE TABLE IF NOT EXISTS etherscan_transactions_all (
+    id SERIAL PRIMARY KEY,
+    transaction_hash VARCHAR(66) UNIQUE NOT NULL,
+    from_address VARCHAR(42) NOT NULL,
+    amount_eth DECIMAL(20,18) NOT NULL,
+    namada_key VARCHAR(66) NOT NULL,
+    input_message VARCHAR,
+    message VARCHAR(100) NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    block_number BIGINT NOT NULL,
+    tx_index INTEGER NOT NULL
+);
+
+-- Add index for timestamp-based queries
+CREATE INDEX idx_etherscan_transactions_all_timestamp ON etherscan_transactions_all(timestamp);
+
+CREATE INDEX idx_etherscan_transactions_all_address_timestamp ON etherscan_transactions_all(from_address, timestamp, amount_eth);
+
 CREATE TABLE IF NOT EXISTS scraped_blocks (
     id SERIAL PRIMARY KEY,
     block_number BIGINT UNIQUE NOT NULL,
@@ -73,6 +92,13 @@ CREATE TABLE IF NOT EXISTS temporary_messages (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS unaccounted_addresses (
+    from_address VARCHAR(42) PRIMARY KEY,
+    namada_key VARCHAR(66) NOT NULL,
+    sig_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create the function to delete messages older than 10 minutes
 CREATE OR REPLACE FUNCTION delete_old_messages()
 RETURNS TRIGGER AS $$
@@ -96,9 +122,12 @@ DROP VIEW IF EXISTS the_finalized_transactions_full_table;
 DROP VIEW IF EXISTS address_totals;
 DROP VIEW IF EXISTS address_totals_finalized;
 DROP VIEW IF EXISTS eligible_addresses;
-DROP VIEW IF EXISTS eligible_addresses_finalized;
 DROP VIEW IF EXISTS donation_stats;
 DROP VIEW IF EXISTS donation_stats_finalized;
+DROP VIEW IF EXISTS filtered_etherscan_not_in_db;
+DROP VIEW IF EXISTS private_suggested_eligible_addresses;
+DROP VIEW IF EXISTS private_above_cap_in_db_eligibles;
+DROP VIEW IF EXISTS private_etherscan_not_in_db_eligibles;
 
 CREATE VIEW combined_donations AS
 WITH temp AS (
@@ -147,7 +176,7 @@ eligible_amounts AS (
         from_address,
         block_number,
         tx_index,
-amount_eth,
+        amount_eth,
         address_running_total,
         preceding_running_total,
 --these are eligible amount contributions for this particular transaction (not cumulative, unless previous donations have been too low..)
@@ -199,6 +228,7 @@ WITH running_totals AS (
         amount_eth,
         block_number,
         tx_index,
+        namada_key,
         SUM(amount_eth) OVER (
             PARTITION BY from_address
             ORDER BY block_number, tx_index
@@ -222,7 +252,8 @@ eligible_amounts AS (
         from_address,
         block_number,
         tx_index,
-amount_eth,
+        namada_key,
+        amount_eth,
         address_running_total,
         preceding_running_total,
 --these are eligible amount contributions for this particular transaction (not cumulative, unless previous donations have been too low..)
@@ -250,7 +281,8 @@ SELECT
         from_address,
         block_number,
         tx_index,
-amount_eth,
+        namada_key,
+        amount_eth,
         address_running_total,
         preceding_running_total, eligible_amount,
 
@@ -300,11 +332,14 @@ CREATE VIEW address_totals_finalized AS
 
 -- query name address totals finalized only
 
-SELECT from_address, SUM(eligible_amount) AS eligible_amount, SUM(adjusted_amount_eth) AS total_amount_before_cutoff, SUM(amount_eth) AS total_amount_within_campaign_window
+SELECT from_address, 
+MAX(namada_key) as tnam, SUM(eligible_amount) AS eligible_amount, 
+SUM(eligible_amount_above_cap) AS eligible_above_cap,
+SUM(adjusted_amount_eth) AS total_amount_before_cutoff, SUM(amount_eth) AS total_amount_within_campaign_window
 
 FROM (
 SELECT id, from_address, amount_eth, 
-block_number, tx_index,
+block_number, tx_index, namada_key,
 --this is where we do the cool stuff
 CASE 
 WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
@@ -313,6 +348,14 @@ THEN 30.0 - (global_total - eligible_amount)
 WHEN global_total > 30.0 THEN 0
 ELSE eligible_amount 
 END as eligible_amount,
+
+CASE 
+WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
+-- previous global total = global_total less eligible_amount
+THEN global_total - 30.0
+WHEN global_total < 30.0 THEN 0
+ELSE eligible_amount 
+END as eligible_amount_above_cap,
 
 CASE 
 WHEN global_total > 30.0 AND global_total - eligible_amount < 30.0
@@ -330,13 +373,6 @@ GROUP BY from_address
 ORDER BY 1;
 
 CREATE VIEW eligible_addresses AS
-
--- query name eligible addresses (new version for topping tx capped up to 30 exactly)
-
-SELECT * FROM address_totals
-WHERE eligible_amount > 0;
-
-CREATE VIEW eligible_addresses_finalized AS
 
 -- query name eligible addresses (new version for topping tx capped up to 30 exactly)
 
@@ -462,3 +498,83 @@ WHERE (SELECT COUNT(*) FROM
     ORDER BY block_number, tx_index
     LIMIT 1) cutoff1)
  < 1;
+
+CREATE VIEW filtered_etherscan_not_in_db AS
+
+-- query name #tag
+SELECT id, transaction_hash, from_address, amount_eth, namada_key, timestamp, created_at, block_number, tx_index FROM     etherscan_transactions_all WHERE 
+transaction_hash NOT IN (
+SELECT transaction_hash from donations_finalized
+
+);
+
+CREATE VIEW private_suggested_eligible_addresses AS
+
+-- query name suggested eligible addresses (new version for topping tx capped up to 30 exactly)
+WITH temp AS (
+  SELECT SUM(eligible_amount) as total_eligible_eth FROM address_totals_finalized
+)
+
+SELECT 
+    from_address, 
+    tnam, 
+    eligible_amount,
+    eligible_amount / (SELECT total_eligible_eth FROM temp) AS fraction,
+    1000000 * (eligible_amount / (SELECT total_eligible_eth FROM temp)) AS suggested_nam,
+    eligible_amount / 30.0 AS predicted_fraction,
+    1000000 * (eligible_amount / 30.0) AS predicted_suggested_nam
+FROM address_totals_finalized
+WHERE eligible_amount > 0;
+
+CREATE VIEW private_above_cap_in_db_eligibles AS
+
+-- query name suggested eligible addresses (new version for topping tx capped up to 30 exactly)
+WITH temp AS (
+  SELECT SUM(eligible_above_cap) as total_eligible_above FROM address_totals_finalized
+)
+
+SELECT 
+    from_address,
+    tnam,
+    eligible_above_cap,
+    eligible_above_cap / 30.0 AS fraction,
+    1000000 * (eligible_above_cap / 30.0) AS suggested_nam
+FROM address_totals_finalized
+WHERE eligible_above_cap > 0;
+
+
+-- The 0.01 conditions are unsafe and were introduced as a temporary solution for the data in Donor Drop 1.
+-- TODO: If this view gets used, it will need a revision.
+CREATE VIEW private_etherscan_not_in_db_eligibles AS
+
+WITH temp AS (
+  SELECT SUM(amount_eth) AS total_sum
+  FROM filtered_etherscan_not_in_db
+
+  --this condition is technically not safe and adapted to the data we know currently are in our db. needs revision
+  WHERE amount_eth > 0.01
+)
+
+ SELECT 
+    q1.from_address,
+    total_eth,
+    COALESCE(unaccounted_addresses.namada_key, q1.namada_key) AS tnam,
+    unaccounted_addresses.sig_hash,
+    total_eth / 30 AS fraction,
+    1000000 * (total_eth / 30) AS suggested_nam
+
+   FROM (
+    SELECT 
+        from_address,
+        SUM(amount_eth) AS total_eth,
+        (SELECT total_sum FROM temp),
+        MAX(namada_key) AS namada_key
+    FROM filtered_etherscan_not_in_db
+        
+    --unsafe. for current data only
+    WHERE amount_eth > 0.01
+    
+    GROUP BY from_address, namada_key) AS q1
+
+LEFT JOIN unaccounted_addresses 
+ON q1.from_address = unaccounted_addresses.from_address;
