@@ -77,6 +77,26 @@ There are currently two flags one could run the scraper with:
 
   > The resulting list of transactions will populate the `etherscan_transactions_all`-table instead of the usual `donations`-tables.
 
+## Exporting results
+
+- List of perfect users (the TOTAL SUM of these should equal the target ETH amount or less if the target was not reached):
+
+  ```sql
+  copy(SELECT from_address, tnam, eligible_amount as eth, suggested_nam FROM private_result_eligible_addresses_finalized_in_db) To '/var/lib/postgresql/private_result_eligible_addresses_finalized_in_db.csv' With CSV DELIMITER ',' HEADER;
+  ```
+
+- List of users who donated after the cap got reached:
+
+  ```sql
+  copy(SELECT from_address, tnam, eligible_above_cap as eth, suggested_nam FROM private_result_above_cap_addresses_in_db) To '/var/lib/postgresql/private_result_above_cap_addresses_in_db.csv' With CSV DELIMITER ',' HEADER;
+  ```
+
+- List of users who were initially not included due to mistakes, but got corrected using (`--all-etherscan-txs` and https://github.com/zenodeapp/donor-drop-frontend/tree/with-link):
+
+  ```sql
+  copy(SELECT from_address, tnam, sig_hash, total_eth as eth, suggested_nam FROM private_result_addresses_not_in_db) To '/var/lib/postgresql/private_result_addresses_not_in_db.csv' With CSV DELIMITER ',' HEADER;
+  ```
+
 ## Testing
  
 The testing suite works as follows:
