@@ -4,6 +4,10 @@ import { log, logError } from "./helpers.mjs";
 
 const PORT = process.env.SCRAPER_PORT || 3000;
 
+const args = process.argv.slice(2);
+const once = args.includes("--once");
+const bypassChecks = args.includes("--bypass-checks"); // This will also consider 'once' to be set to 'true'
+
 createServer(async (req, res) => {
   res.statusCode = 200;
   res.end();
@@ -16,7 +20,7 @@ createServer(async (req, res) => {
 
   // Initialize server
   try {
-    await initialize();
+    await initialize({ once: bypassChecks || once, bypassChecks });
   } catch (error) {
     logError("Failed to initialize scraper:", error);
   }
