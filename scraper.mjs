@@ -20,7 +20,11 @@ createServer(async (req, res) => {
 
   // Initialize server
   try {
-    await initialize({ once: bypassChecks || once, bypassChecks });
+    await initialize({
+      once: bypassChecks || once,
+      bypassChecks,
+      onlyEtherscan: bypassChecks, // currently bypassing checks will only use the Etherscan API
+    });
   } catch (error) {
     logError("Failed to initialize scraper:", error);
   }
