@@ -513,8 +513,8 @@ CREATE VIEW filtered_etherscan_not_in_db AS
 
 -- query name #tag
 SELECT id, transaction_hash, from_address, amount_eth, namada_key, timestamp, created_at, block_number, tx_index FROM     etherscan_transactions_all WHERE 
-transaction_hash NOT IN (
-SELECT transaction_hash from donations_finalized
+lower(transaction_hash) NOT IN (
+SELECT lower(transaction_hash) from donations_finalized
 
 );
 
