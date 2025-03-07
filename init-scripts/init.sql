@@ -122,6 +122,7 @@ DROP VIEW IF EXISTS the_finalized_transactions_full_table;
 DROP VIEW IF EXISTS address_totals;
 DROP VIEW IF EXISTS address_totals_finalized;
 DROP VIEW IF EXISTS eligible_addresses;
+DROP VIEW IF EXISTS eligible_addresses_finalized;
 DROP VIEW IF EXISTS donation_stats;
 DROP VIEW IF EXISTS donation_stats_finalized;
 DROP VIEW IF EXISTS filtered_etherscan_not_in_db;
@@ -373,6 +374,13 @@ GROUP BY from_address
 ORDER BY 1;
 
 CREATE VIEW eligible_addresses AS
+
+-- query name eligible addresses (new version for topping tx capped up to 30 exactly)
+
+SELECT * FROM address_totals
+WHERE eligible_amount > 0;
+
+CREATE VIEW eligible_addresses_finalized AS
 
 -- query name eligible addresses (new version for topping tx capped up to 30 exactly)
 
