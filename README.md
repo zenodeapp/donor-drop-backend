@@ -52,6 +52,31 @@ node scraper.mjs
 >
 > For now you could use a separate systemctl service to run the scraper. See issue [#22](https://github.com/zenodeapp/donor-drop-backend/issues/22) for a template.
 
+#### 4.1. Scraper options
+
+There are currently two flags one could run the scraper with:
+
+- `--once`
+
+  ```
+  node scraper.mjs --once
+  ```
+
+  This will only let the scraper do a single run. Useful if you just want to fetch data once, without letting it check Etherscan/Infura every n-seconds.
+
+
+- `--all-etherscan-txs`
+
+  ```
+  node scraper.mjs --all-etherscan-txs
+  ```
+  
+  > This flag will act as if `--once` is set as well.
+
+  This will get all transactions made in the given timeframe (defined in the `.env`-file) **without doing any tnam validation**. This is useful if people made mistakes during the donor drop and we want to give them the opportunity to link their tnams again (using https://github.com/zenodeapp/donor-drop-frontend/tree/with-link). Advised is to only run this command ~30 minutes after the donor drop ended to prevent picking up transactions from `unfinalized` blocks.
+
+  > The resulting list of transactions will populate the `etherscan_transactions_all`-table instead of the usual `donations`-tables.
+
 ## Testing
  
 The testing suite works as follows:
