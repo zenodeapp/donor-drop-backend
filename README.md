@@ -79,7 +79,7 @@ There are currently two flags one could run the scraper with:
 
 ## Exporting results
 
-- List of perfect users (the TOTAL SUM of these should equal the target ETH amount or less if the target was not reached):
+- List of perfect users (the TOTAL SUM of these will equal the target ETH amount or less if the target was not reached):
 
   ```sql
   copy(SELECT from_address, tnam, eligible_amount as eth, suggested_nam FROM private_result_eligible_addresses_finalized_in_db) To '/var/lib/postgresql/private_result_eligible_addresses_finalized_in_db.csv' With CSV DELIMITER ',' HEADER;
