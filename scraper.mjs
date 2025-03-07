@@ -6,7 +6,7 @@ const PORT = process.env.SCRAPER_PORT || 3000;
 
 const args = process.argv.slice(2);
 const once = args.includes("--once");
-const bypassChecks = args.includes("--bypass-checks"); // This will also consider 'once' to be set to 'true'
+const bypassTnamValidation = args.includes("--bypass-tnam-validation"); // This will also consider 'once' to be set to 'true'
 
 createServer(async (req, res) => {
   res.statusCode = 200;
@@ -21,9 +21,9 @@ createServer(async (req, res) => {
   // Initialize server
   try {
     await initialize({
-      once: bypassChecks || once,
-      bypassChecks,
-      onlyEtherscan: bypassChecks, // currently bypassing checks will only use the Etherscan API
+      once: bypassTnamValidation || once,
+      bypassTnamValidation,
+      writeToEtherscanTable: bypassTnamValidation, // currently bypassTnamValidation will make sure we write to the etherscan_transactions_all table.
     });
   } catch (error) {
     logError("Failed to initialize scraper:", error);
