@@ -87,7 +87,7 @@ There are currently two flags one could run the scraper with:
   
   > This flag will act as if `--once` is set as well.
 
-  This will get all transactions made in the given timeframe (defined in the [.env](./.env.example)-file) **without doing any tnam validation**. This is useful if we want to give the people that made a mistake during the donor drop the opportunity to link their tnams again. See [A.1 Rescue plan](#a1-rescue-plan) for a detailed description on how to approach that.
+  This will get all transactions that meet the conditions as described in [4. Run scraper](#4-run-scraper) **without doing any memo or tnam validation**. This is useful if we want to give the people that made a mistake during the donor drop the opportunity to link their tnams again. See [A.1 Rescue plan](#a1-rescue-plan) for a detailed description on how to approach that.
 
   > The resulting list of transactions will populate the `etherscan_transactions_all`-table instead of the usual `donations`-tables.
 
@@ -118,12 +118,12 @@ There are currently two flags one could run the scraper with:
 If there are people who messed up their donation, the following can be done:
 
 1. Wait for approx. 30 minutes after the donor drop ended (to make sure all eth blocks are in a `finalized` state).
-2. (Optional) adjust the `SCRAPER_START_DATE`, `SCRAPER_END_DATE` (and `SCRAPER_START_BLOCK`) in your [.env](./.env.example)-file.
-2. Run ```node scraper.mjs --all-etherscan-txs```.
-3. Double-check the data this command gathered in the `etherscan_transactions_all`-table. It should contain every transaction done between `SCRAPER_START_DATE` and `SCRAPER_END_DATE`.
-4. Switch the frontend to the [`with-link`](https://github.com/zenodeapp/donor-drop-frontend/tree/with-link)-branch and re-deploy it.
-5. Let people link their tnam addresses using the frontend (this form will only allow wallet addresses that failed to register a tnam address).
-6. Keep track of the results by checking `unaccounted_addresses` and `private_result_addresses_not_in_db`.
+2. (Optional) adjust the `SCRAPER_START_DATE`, `SCRAPER_END_DATE` and `SCRAPER_START_BLOCK` in your [.env](./.env.example)-file.
+3. Run ```node scraper.mjs --all-etherscan-txs```.
+4. Double-check the data this command gathered in the `etherscan_transactions_all`-table. It should contain every transaction done between `SCRAPER_START_DATE` and `SCRAPER_END_DATE`.
+5. Switch the frontend to the [`with-link`](https://github.com/zenodeapp/donor-drop-frontend/tree/with-link)-branch and re-deploy it.
+6. Let people link their tnam addresses using the frontend (this form will only allow wallet addresses that failed to register a tnam address).
+7. Keep track of the results by checking `unaccounted_addresses` and `private_result_addresses_not_in_db`.
 
 ### A.2 Testing _(likely outdated)_
 
