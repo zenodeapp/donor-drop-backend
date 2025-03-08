@@ -44,6 +44,10 @@ For easy access to the database, you could use a tool like `pgAdmin` or `dbeaver
 
 ### 4. Run scraper
 
+> [!TIP]
+>
+> You could use a separate systemctl service to run the scraper. See issue [#22](https://github.com/zenodeapp/donor-drop-backend/issues/22) for a template. 
+
 ```bash
 node scraper.mjs
 ```
@@ -54,18 +58,13 @@ By default the scraper will periodically check for transactions made to the addr
 - donation _x_ has hex _h_ in the transaction's memo-field, where decode(_h_) = _a valid tnam-address_. The decode-method is quite robust and auto-corrects most of the common mistakes people make (e.g. multi-encoded hex string, forgetting the '0x' part, adding more characters than necessary).
 - donation _x_ is not a failed transaction.
 
-
 The scraper starts two schedulers: one that registers any transaction that passes the requirements above and the other that also considers block finality. 
 
 > [!NOTE]
 > 
 > *Why?*
 > 
-> Due to finality, a transaction is only certain once a block is completely finalized on-chain. This takes on average 15 to 20 minutes. Which is problematic if we want to show a tally in real-time. So the data coming from the scheduler that's unbothered by finalization should only be considered as an indication and the eventual results will come from the transactions found by the finalized scheduler. The frontend takes both the real-time and finalized data into account. 
-
-> [!TIP]
->
-> For now you could use a separate systemctl service to run the scraper. See issue [#22](https://github.com/zenodeapp/donor-drop-backend/issues/22) for a template.
+> A transaction is only certain once a block is completely finalized on-chain. This takes on average 15 to 20 minutes. Which is problematic if we want to show a tally in real-time. So the data coming from the scheduler that's unbothered by finalization should only be considered as an indication, whereas the eventual results will come from the transactions found by the finalized scheduler. The frontend makes sure to take both real-time and finalized data into account and visualizes this accordingly.
 
 #### 4.1. Scraper options _(optional)_
 
