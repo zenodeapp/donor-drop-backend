@@ -93,6 +93,8 @@ There are currently two flags one could run the scraper with:
 
 ## Results
 
+The following commands can be used to export the end results in .csv-format:
+
 - List of perfect users (the TOTAL SUM of these will equal the target ETH amount or less if the target was not reached):
 
   ```sql
@@ -118,7 +120,7 @@ There are currently two flags one could run the scraper with:
 If there are people who messed up their donation, the following can be done:
 
 1. Wait for approx. 30 minutes after the donor drop ended (to make sure all eth blocks are in a `finalized` state).
-2. (Optional) adjust the `SCRAPER_START_DATE`, `SCRAPER_END_DATE` and `SCRAPER_START_BLOCK` in your [.env](./.env.example)-file.
+2. _(Optional)_ adjust the `SCRAPER_START_DATE`, `SCRAPER_END_DATE` and `SCRAPER_START_BLOCK` in your [.env](./.env.example)-file.
 3. Run ```node scraper.mjs --all-etherscan-txs```.
 4. Double-check the data this command gathered in the `etherscan_transactions_all`-table. It should contain every transaction done between `SCRAPER_START_DATE` and `SCRAPER_END_DATE`.
 5. Switch the frontend to the [`with-link`](https://github.com/zenodeapp/donor-drop-frontend/tree/with-link)-branch and re-deploy it.
