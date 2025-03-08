@@ -128,7 +128,7 @@ If there are people who messed up their donation, the following can be done:
 6. Let people link their tnam addresses using the frontend (this form will only allow wallet addresses that failed to register a tnam address).
 7. Keep track of the results by checking `unaccounted_addresses` and `private_result_addresses_not_in_db`.
 
-### A.2 Testing _(likely outdated)_
+### A.3 Testing _(likely outdated)_
 
 The testing suite works as follows:
 
