@@ -75,8 +75,6 @@ There are currently two flags one could run the scraper with:
 
   This will get all transactions that meet the conditions described in [A.1 Donation finality](#a1-donation-finality) **without doing any memo or tnam validation**. This is useful if we want to give the people that made a mistake during the donor drop the opportunity to link their tnams again. See [A.2 Rescue plan](#a2-rescue-plan) for a detailed description on how to approach that.
 
-  > The resulting list of transactions will populate the `etherscan_transactions_all`-table instead of the usual `donations`-tables.
-
 ## Results
 
 The following commands can be used to export the end results in .csv-format:
