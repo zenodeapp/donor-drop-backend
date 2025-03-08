@@ -73,7 +73,7 @@ There are currently two flags one could run the scraper with:
   
   > This flag will act as if `--once` is set as well.
 
-  This will get all transactions made in the given timeframe (defined in the [.env](./.env.example)-file) **without doing any tnam validation**. This is useful if we want to give the people made mistakes during the donor drop the opportunity to link their tnams again. See [A.1 Rescue plan](https://github.com/zenodeapp/donor-drop-backend/edit/main/README.md#a1-rescue-plan) for a detailed description on how to approach that.
+  This will get all transactions made in the given timeframe (defined in the [.env](./.env.example)-file) **without doing any tnam validation**. This is useful if we want to give the people that made a mistake during the donor drop the opportunity to link their tnams again. See [A.1 Rescue plan](https://github.com/zenodeapp/donor-drop-backend/edit/main/README.md#a1-rescue-plan) for a detailed description on how to approach that.
 
   > The resulting list of transactions will populate the `etherscan_transactions_all`-table instead of the usual `donations`-tables.
 
