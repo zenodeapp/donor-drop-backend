@@ -104,13 +104,14 @@ There are currently two flags one could run the scraper with:
 If there are people who messed up their donation, the following can be done:
 
 1. Wait for approx. 30 minutes after the donor drop ended (to make sure all eth blocks are in a `finalized` state).
+2. (Optional) adjust the `SCRAPER_START_DATE`, `SCRAPER_END_DATE` (and `SCRAPER_START_BLOCK`) in your [.env](./.env.example)-file.
 2. Run ```node scraper.mjs --all-etherscan-txs```.
-3. Double-check the data this command gathered in the `etherscan_transactions_all`-table. It should contain every transaction done between `SCRAPER_START_DATE` and `SCRAPER_END_DATE` (see: [.env](./.env.example)).
+3. Double-check the data this command gathered in the `etherscan_transactions_all`-table. It should contain every transaction done between `SCRAPER_START_DATE` and `SCRAPER_END_DATE`.
 4. Switch the frontend to the [`with-link`](https://github.com/zenodeapp/donor-drop-frontend/tree/with-link)-branch and re-deploy it.
-5. Let people link their tnam addresses using the frontend (this will only allow ethereum addresses that made a mistake during their donation).
-6. Keep track of the results by checking `unaccounted_addresses` or `private_result_addresses_not_in_db`.
+5. Let people link their tnam addresses using the frontend (this form will only allow wallet addresses that failed to register a tnam address).
+6. Keep track of the results by checking `unaccounted_addresses` and `private_result_addresses_not_in_db`.
 
-### A.2 Testing
+### A.2 Testing _(likely outdated)_
 
 The testing suite works as follows:
 
