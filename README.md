@@ -62,7 +62,7 @@ The scraper starts two schedulers: one that registers any transaction that passe
 
 > [!NOTE]
 > 
-> *Why?*
+> **Why _two_?**
 > 
 > A transaction is only certain once a block is completely finalized on-chain. This takes on average 15 to 20 minutes. Which is problematic if we want to show a tally in real-time. So the data coming from the scheduler that's unbothered by finalization should only be considered as an indication, whereas the eventual results will come from the transactions found by the finalized scheduler. The frontend makes sure to take both real-time and finalized data into account and visualizes this accordingly.
 
