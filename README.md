@@ -52,7 +52,7 @@ node scraper.mjs
 >
 > For now you could use a separate systemctl service to run the scraper. See issue [#22](https://github.com/zenodeapp/donor-drop-backend/issues/22) for a template.
 
-#### 4.1. Scraper options
+#### 4.1. Scraper options _(optional)_
 
 There are currently two flags one could run the scraper with:
 
