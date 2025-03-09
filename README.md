@@ -101,7 +101,7 @@ The following commands can be used to export the end results in .csv-format:
 
 ### A.1 Donation finality
 
-By default the scraper will periodically check for transactions made to the address defined in your .env-file. It uses a combination of info gathered from the Etherscan and Infura API and only picks up the transactions that pass the following:
+By default the scraper will periodically check for transactions made to the address defined in your .env-file. It uses a combination of info gathered from the Etherscan and Infura API and only picks up the transactions that meet the following conditions:
 
 - donation _x_ comes from block _n_, where _n_ >= `SCRAPER_START_BLOCK`.
 - donation _x_ has transaction date _d_, where _d_ >= `SCRAPER_START_DATE` and _d_ <= `SCRAPER_END_DATE`. 
@@ -112,9 +112,9 @@ The scraper starts two schedulers: one that registers any transaction that passe
 
 > [!NOTE]
 > 
-> **Why _two_?**
+> **Why _two schedulers_?**
 > 
-> A transaction is only certain once a block is completely finalized on-chain. This takes on average 15 to 20 minutes. Which is problematic if we want to show a tally in real-time. So the data coming from the scheduler that's unbothered by finalization should only be considered as an indication, whereas the eventual results will come from the the _finalized_-scheduler. The frontend makes sure to take both real-time and finalized data into account and visualizes this accordingly.
+> A transaction is only certain once a block is completely finalized on-chain. This takes on average 15 to 20 minutes. Which is problematic if we want to show a tally in real-time. So, to solve this, we temporarily use the data from the scheduler that's unbothered by finalization _as an indication_, whereas the actual results get calculated using the data from the _finalized_-scheduler. The frontend makes sure to take both this real-time and finalized data into account and visualize them accordingly.
 
 ### A.2 Rescue plan
 
