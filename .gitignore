@@ -47,3 +47,6 @@ collegeproject-c9550-c919afa91c6b.json
 # lock files
 package-lock.json
 yarn.lock
+
+# Results
+/output
