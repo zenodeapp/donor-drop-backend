@@ -47,7 +47,7 @@ const askUser = (message, defaultYes = false, tabs = 0) => {
   });
 };
 
-const createCsv = (columns, rows) => {
+const createCsvContent = (columns, rows) => {
   let result = columns.join(",") + "\n";
   rows.forEach((row) => {
     result += columns.map((col) => row[col] ?? "").join(",") + "\n";
@@ -56,4 +56,4 @@ const createCsv = (columns, rows) => {
   return result;
 };
 
-export { log, logError, createCsv, askUser };
+export { log, logError, askUser, createCsvContent };
