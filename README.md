@@ -77,24 +77,63 @@ There are currently two flags one could run the scraper with:
 
 ## Results
 
-The following commands can be used to export the end results in .csv-format:
+The results are built from three different categories:
 
-- List of perfect users (the TOTAL SUM of these will equal the target ETH amount or less if the target was not reached):
+- (1) List of _eligible users_
+- (2) List of users who donated _after the cap got reached_
+- (3) List of users who _initially weren't included due to mistakes made_, but got corrected using [A.2 Rescue plan](#a2-rescue-plan)
+
+There are two ways one could export these results. Either [_by using the wizard_](#i-using-the-wizard-recommended) or [_by using PSQL_](#ii-using-psql).
+
+### I. Using the wizard _(recommended)_
+
+#### Command
+The following command can be used to export the raw and final (merged) results in .csv, .json and .proposal.json-format:
+
+```
+node result.mjs
+```
+
+#### Arguments _(optional)_
+
+- `--exclude-eligibles`: excludes eligible users
+- `--exclude-above-cap`: excludes users who donated after the cap
+- `--exclude-not-in-db`: excludes users who were initially not included
+- `--min-eth-per-address x`: the minimum amount of ETH a participant is required to have donated
+  - _default value_: `0.03`
+- `--max-eth-per-address y`: the maximum amount of ETH a participant was allowed to donate
+  - _default value_: `0.3`
+- `--clean`: this will clean the ./output folder before exporting the results
+
+#### Features
+- Exports .csv, .json and .proposal.json files.
+- Saves _raw_ exports from the views:
+  - _private_result_eligible_addresses_finalized_in_db_ as  `_raw_eligibles` (1),
+  - _private_result_above_cap_addresses_in_db_ as `_raw_above_cap` (2) and
+  - _private_result_addresses_not_in_db_ as `_raw_not_in_db` (3).
+- Merges the results together by grouping the results by _tnam address_. This makes sure each participant will only be included once in the .proposal.json file.
+- Gives the user a heads up whenever a participant gets skipped due to a _missing tnam address_ or _signature hash_.
+- Asks the user whether to _cap a tnam address' ETH amount_ if the resulting value _is higher than_ the set `--max-eth-per-address`.
+- Asks the user whether to _exclude a tnam address_ if this participant's resulting donation amount _is lower than_ the set `--min-eth-per-address`.
+  
+### II. Using PSQL
+This route requires more manual work as it will only get you the _raw_ .csv files (which are also exported when _using the wizard_). If for some reason you're unable to use `node` or you only have direct access to the SQL database, use these commands:
+- _private_result_eligible_addresses_finalized_in_db_ as  `_raw_eligibles.csv` (1)
 
   ```sql
-  copy(SELECT from_address, tnam, eligible_amount as eth, suggested_nam FROM private_result_eligible_addresses_finalized_in_db) To '/var/lib/postgresql/private_result_eligible_addresses_finalized_in_db.csv' With CSV DELIMITER ',' HEADER;
+  copy(SELECT from_address AS eth_address, tnam AS nam_address, eligible_amount AS eth_amount, suggested_nam AS nam_amount FROM private_result_eligible_addresses_finalized_in_db) To '/var/lib/postgresql/_raw_eligibles.csv' With CSV DELIMITER ',' HEADER;
   ```
 
-- List of users who donated after the cap got reached:
+- _private_result_above_cap_addresses_in_db_ as `_raw_above_cap.csv` (2)
 
   ```sql
-  copy(SELECT from_address, tnam, eligible_above_cap as eth, suggested_nam FROM private_result_above_cap_addresses_in_db) To '/var/lib/postgresql/private_result_above_cap_addresses_in_db.csv' With CSV DELIMITER ',' HEADER;
+  copy(SELECT from_address AS eth_address, tnam AS nam_address, eligible_above_cap AS eth_amount, suggested_nam AS nam_amount FROM private_result_above_cap_addresses_in_db) To '/var/lib/postgresql/_raw_above_cap.csv' With CSV DELIMITER ',' HEADER;
   ```
 
-- List of users who were initially not included due to mistakes, but got corrected using [A.2 Rescue plan](#a2-rescue-plan):
+- _private_result_addresses_not_in_db_ as `_raw_not_in_db.csv` (3)
 
   ```sql
-  copy(SELECT from_address, tnam, sig_hash, total_eth as eth, suggested_nam FROM private_result_addresses_not_in_db) To '/var/lib/postgresql/private_result_addresses_not_in_db.csv' With CSV DELIMITER ',' HEADER;
+  copy(SELECT from_address AS eth_address, tnam AS nam_address, total_eth AS eth_amount, suggested_nam AS nam_amount, sig_hash FROM private_result_addresses_not_in_db) To '/var/lib/postgresql/_raw_not_in_db.csv' With CSV DELIMITER ',' HEADER;
   ```
 
 ## Appendix
