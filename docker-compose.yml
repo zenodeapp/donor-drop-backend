@@ -1,5 +1,5 @@
 services:
-  db:
+  my_db:
     image: postgres:latest
     restart: always
     environment:
