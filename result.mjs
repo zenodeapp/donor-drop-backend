@@ -19,7 +19,7 @@ const maxEthPerAddress = process.argv.includes("--max-eth-per-address")
 const queries = {};
 
 if (!excludeEligibles)
-  queries.eligibles = `SELECT from_address AS eth_address, tnam AS nam_address, eligible_amount AS eth_amount, suggested_nam AS nam_amount FROM private_result_eligible_addresses_finalized_in_db`;
+  queries.eligibles = `SELECT from_address AS eth_address, tnam AS nam_address, eligible_amount AS eth_amount, predicted_suggested_nam AS nam_amount FROM private_result_eligible_addresses_finalized_in_db`;
 
 if (!excludeAboveCap)
   queries.above_cap = `SELECT from_address AS eth_address, tnam AS nam_address, eligible_above_cap AS eth_amount, suggested_nam AS nam_amount FROM private_result_above_cap_addresses_in_db`;
