@@ -13,6 +13,10 @@ const once = args.includes("--once");
 // --all-etherscan-txs will make sure we skip tnam validation, only scrape using etherscan, write to the etherscan_transactions_all table and considers '--once' to be set.
 const allEtherscanTxs = args.includes("--all-etherscan-txs");
 
+// --bypass-tnam-validation will skip tnam validation in both the scheduler and initial scrape.
+// WARNING: NOT adviced to use due to incompatibilities with the database!
+const bypassTnamValidation = args.includes("--bypass-tnam-validation");
+
 createServer(async (req, res) => {
   res.statusCode = 200;
   res.end();
@@ -28,7 +32,7 @@ createServer(async (req, res) => {
     await initialize({
       once: allEtherscanTxs || once,
       allEtherscanTxs,
-      bypassTnamValidation: allEtherscanTxs,
+      bypassTnamValidation: allEtherscanTxs || bypassTnamValidation,
     });
   } catch (error) {
     logError("Failed to initialize scraper:", error);
