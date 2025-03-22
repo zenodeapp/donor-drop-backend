@@ -121,7 +121,7 @@ This route requires more manual work as it will only get you the _raw_ .csv file
 - _private_result_eligible_addresses_finalized_in_db_ as  `_raw_eligibles.csv` (1)
 
   ```sql
-  copy(SELECT from_address AS eth_address, tnam AS nam_address, eligible_amount AS eth_amount, suggested_nam AS nam_amount FROM private_result_eligible_addresses_finalized_in_db) To '/var/lib/postgresql/_raw_eligibles.csv' With CSV DELIMITER ',' HEADER;
+  copy(SELECT from_address AS eth_address, tnam AS nam_address, eligible_amount AS eth_amount, predicted_suggested_nam AS nam_amount FROM private_result_eligible_addresses_finalized_in_db) To '/var/lib/postgresql/_raw_eligibles.csv' With CSV DELIMITER ',' HEADER;
   ```
 
 - _private_result_above_cap_addresses_in_db_ as `_raw_above_cap.csv` (2)
